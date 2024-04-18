@@ -1,0 +1,7 @@
+build
+plotting_service.egg-info
+venv
+Dockerfile
+.gitignore
+.github
+test
