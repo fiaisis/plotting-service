@@ -19,4 +19,3 @@ class PlotStrategy(ABC):
         Generate the plot data for the given nexus file
         :return:
         """
-        pass
