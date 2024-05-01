@@ -5,3 +5,6 @@ Dockerfile
 .gitignore
 .github
 test
+LICENSE
+.pylintrc
+README.md
