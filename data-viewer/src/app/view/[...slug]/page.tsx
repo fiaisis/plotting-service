@@ -1,6 +1,6 @@
-import { notFound } from "next/navigation";
+import {notFound} from "next/navigation";
 import NexusViewer from "@/components/NexusViewer";
-import "../globals.css";
+import "../../globals.css";
 
 export default function DataPage({ params }: { params: { slug: string[] } }) {
   // We expect a route of /instrument_name/experiment_number/filename
