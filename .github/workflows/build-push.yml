@@ -31,8 +31,8 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
-          file: ./backend/Dockerfile
-          context: ./backend
+          file: ./plotting-service/Dockerfile
+          context: ./plotting-service
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/plotting-service:${{ github.sha }}
 
@@ -56,7 +56,7 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
-          file: ./frontend/Dockerfile
-          context: ./frontend
+          file: ./data-viewer/Dockerfile
+          context: ./data-viewer
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/data-viewer:${{ github.sha }}
