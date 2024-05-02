@@ -29,3 +29,12 @@ updates:
       docker-packages:
         patterns:
           - "*"
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    groups:
+      yarn-packages:
+        patterns:
+          - "*"
