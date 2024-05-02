@@ -5,6 +5,7 @@ export default function Nav() {
     <nav className="nav">
       <div className="nav-title-container">
         <Image
+          priority
           src="/data-viewer/logo.png"
           alt="Fia-Logo"
           height={260 / 10}
