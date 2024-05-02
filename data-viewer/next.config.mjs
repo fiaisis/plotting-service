@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    output: "standalone",
-    basePath: "/data-viewer",
-    assetPrefix: "/data-viewer"
+    output: "standalone"
 };
 
 export default nextConfig;
