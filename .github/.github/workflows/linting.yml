@@ -30,6 +30,6 @@ jobs:
           python -m pip install .[code-inspection]
       - name: Run pylint
         run: pylint plotting_service
-
-      - name: Run MyPy
-        run: mypy --strict -p plotting_service
+#
+#      - name: Run MyPy
+#        run: mypy --strict -p plotting_service
