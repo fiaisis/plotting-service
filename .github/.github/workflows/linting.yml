@@ -33,4 +33,4 @@ jobs:
 
       - name: Run MyPy
         working-directory: ./plotting-service
-        run: mypy --strict ./plotting_service/
+        run: mypy --strict -p plotting_service
