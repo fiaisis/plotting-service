@@ -33,4 +33,4 @@ jobs:
         run: pylint plotting_service
 
       - name: Run MyPy
-        run: mypy --strict plotting_service/
+        run: mypy --strict plotting_service/**
