@@ -8,7 +8,7 @@ export default function NexusViewer(props: {
   apiUrl: string;
 }) {
   // We need to turn the env var into a full url as the h5provider can not take just the route.
-  // Typically we expect API_URL env var to be /plottingapi in staging and production
+  // Typically, we expect API_URL env var to be /plottingapi in staging and production
   const [hostName, setHostName] = useState<string>("");
   const [protocol, setProtocol] = useState<string>("http");
   useEffect(() => {
