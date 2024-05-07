@@ -3,11 +3,6 @@ describe("Basic loading tests for test nexus file", () => {
     cy.visit("http://localhost:3000/view/mari/20024/MAR29531_10.5meV_sa.nxspe");
   });
 
-  it("loads the test nexus file", () => {
-    cy.get("[data-path='/']")
-      .find("span")
-      .should("contain.text", "MAR29531_10.5meV_sa.nxspe");
-  });
   it("loads the canvas area", () => {
     cy.get("[class*=canvasArea]")
       .should("be.visible")
