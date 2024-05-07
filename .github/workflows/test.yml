@@ -29,7 +29,7 @@ jobs:
 
       - name: Start backend
         run: |
-          export CEPH_DIR=${{ GITHUB_WORKSPACE }}/plotting-service/test/test_ceph
+          export CEPH_DIR=${{ github.workspace }}/plotting-service/test/test_ceph
           uvicorn plotting_service.plotting_api:app &
 
       - name: CD Dataviewer
