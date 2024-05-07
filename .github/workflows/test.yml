@@ -31,7 +31,7 @@ jobs:
         env:
           CEPH_DIR: ${{ github.workspace }}/plotting-service/test/test_ceph
         run: |
-          ls ${{ github.workspace }}/plotting-service
+          ls ${{ github.workspace }}/plotting-service/test/test_ceph/mari/RB20024/autoreduced
           uvicorn plotting_service.plotting_api:app &
 
       - name: cypress-run
