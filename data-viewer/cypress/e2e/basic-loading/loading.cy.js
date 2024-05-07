@@ -1,4 +1,4 @@
-describe("example to-do app", () => {
+describe("Basic loading tests for test nexus file", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/view/mari/20024/MAR29531_10.5meV_sa.nxspe");
   });
