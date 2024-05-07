@@ -28,9 +28,9 @@ jobs:
           python -m pip install .
 
       - name: Start backend
-        run: |
-          export CEPH_DIR=${{ github.workspace }}/plotting-service/test/test_ceph
-          uvicorn plotting_service.plotting_api:app &
+        env:
+          CEPH_DIR: /home/runner/work/plotting-service/plotting-service/plotting-service/test/test_ceph
+        run: uvicorn plotting_service.plotting_api:app &
 
       - name: cypress-run
         uses: cypress-io/github-action@v6
