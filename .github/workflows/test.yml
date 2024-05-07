@@ -32,11 +32,9 @@ jobs:
           export CEPH_DIR=${{ github.workspace }}/plotting-service/test/test_ceph
           uvicorn plotting_service.plotting_api:app &
 
-      - name: CD Dataviewer
-        run: cd ${{ github.workspace }}/data-viewer
-
       - name: cypress-run
         uses: cypress-io/github-action@v6
         with:
           build: yarn build
           start: yarn start
+          working-directory: data-viewer
