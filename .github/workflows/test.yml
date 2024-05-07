@@ -42,7 +42,7 @@ jobs:
           browser: firefox
 
       - name: Upload screenshots
-        uses: actions/upload-artifact@latest
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: cypress-snapshots
