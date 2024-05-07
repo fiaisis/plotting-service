@@ -29,10 +29,8 @@ jobs:
 
       - name: Start backend
         env:
-          CEPH_DIR: ${{ github.workspace }}/plotting-service/test/test_ceph
-        run: |
-          ls /home/runner/work/plotting-service/plotting-service/plotting-service/test/test_ceph/mari/RBNumber/RB20024/autoreduced
-          uvicorn plotting_service.plotting_api:app &
+          CEPH_DIR: /home/runner/work/plotting-service/plotting-service/plotting-service/test/test_ceph
+        run: uvicorn plotting_service.plotting_api:app &
 
       - name: cypress-run
         uses: cypress-io/github-action@v6
