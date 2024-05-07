@@ -33,7 +33,7 @@ jobs:
           uvicorn plotting_service.plotting_api:app &
 
       - name: CD Dataviewer
-        run: cd ../data-viewer
+        run: cd ${{ github.workspace }}/data-viewer
 
       - name: cypress-run
         uses: cypress-io/github-action@v6
