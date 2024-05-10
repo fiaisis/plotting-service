@@ -13,7 +13,7 @@ updates:
 
   # Maintain dependencies for pip
   - package-ecosystem: "pip" #
-    directory: "/"
+    directory: "/plotting-service"
     schedule:
       interval: "daily"
     groups:
@@ -22,10 +22,28 @@ updates:
           - "*"
 
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/plotting-service"
     schedule:
       interval: "daily"
     groups:
-      docker-packages:
+      plotting-service-docker-image:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "docker"
+    directory: "/data-viewer"
+    schedule:
+      interval: "daily"
+    groups:
+      data-viewer-docker-image:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "npm"
+    directory: "/data-viewer"
+    schedule:
+      interval: "daily"
+    groups:
+      yarn-packages:
         patterns:
           - "*"

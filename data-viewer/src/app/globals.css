@@ -1,0 +1,30 @@
+body {
+    margin:0
+}
+
+.h5-container {
+    width: 100vw;
+    height: 100vh;
+}
+
+.nav-title-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.title {
+    font-size: x-large;
+}
+
+.nav {
+    background-color: #002F86;
+    color: white;
+    display: flex;
+    padding: 1rem 2rem 1rem 2rem
+}
+
+.spacer {
+    flex-grow: 1
+}
