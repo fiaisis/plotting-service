@@ -24,10 +24,10 @@ export default function NexusViewer(props: {
   return (
     <H5GroveProvider
       url={apiUrl}
-      filepath={props.filepath}
+      filepath={props.filepath.split("%20").join(" ")}
       axiosConfig={useMemo(
         () => ({
-          params: { file: props.filepath },
+          params: { file: props.filepath.split("%20").join(" ") },
         }),
         [props.filepath],
       )}
