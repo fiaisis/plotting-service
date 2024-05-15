@@ -3,10 +3,10 @@ name = "plotting-service"
 readme = "README.md"
 version = "0.0.1"
 dependencies = [
-    "fastapi[all]==0.110.0",
-    "pydantic==2.6.2",
-    "uvicorn==0.27.1",
-    "h5grove[fastapi]==2.1.0"
+    "fastapi[all]==0.111.0",
+    "pydantic==2.7.1",
+    "uvicorn==0.29.0",
+    "h5grove[fastapi]==2.2.0"
 ]
 
 [project.urls]
@@ -14,13 +14,13 @@ dependencies = [
 
 [project.optional-dependencies]
 formatting = [
-    "black==24.2.0"
+    "black==24.4.2"
 ]
 
 code-inspection = [
-    "pylint==3.1.0",
-    "mypy==1.8.0",
-    "types-requests==2.31.0.20240218",
+    "pylint==3.2.0",
+    "mypy==1.10.0",
+    "types-requests==2.31.0.20240406",
     "types-urllib3==1.26.25.14"
 ]
 
