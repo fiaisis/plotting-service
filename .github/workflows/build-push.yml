@@ -44,7 +44,7 @@ jobs:
           token: ${{ secrets.GITOPS_STAGING_EDIT_TOKEN }}
   
       - name: Edit the YAML plotting-service file for staging
-        uses: mikefarah/yq@v4.43.1
+        uses: mikefarah/yq@v4.44.1
         with:
           cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "plotting-service").image = "ghcr.io/fiaisis/plotting-service@${{ steps.docker_build.outputs.digest }}"' './components/plotting-service/overlays/staging/plotting-service.yml'
   
@@ -88,7 +88,7 @@ jobs:
           token: ${{ secrets.GITOPS_STAGING_EDIT_TOKEN }}
   
       - name: Edit the YAML data-viewer file for staging
-        uses: mikefarah/yq@v4.43.1
+        uses: mikefarah/yq@v4.44.1
         with:
           cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "data-viewer").image = "ghcr.io/fiaisis/data-viewer@${{ steps.docker_build.outputs.digest }}"' './components/data-viewer/overlays/staging/data-viewer.yml'
   
