@@ -29,12 +29,31 @@ jobs:
           password: ${{ secrets.WRITE_PACKAGE_TOKEN }}
 
       - name: Build and push image
+        id: docker_build
         uses: docker/build-push-action@v5
         with:
           file: ./plotting-service/Dockerfile
           context: ./plotting-service
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/plotting-service:${{ github.sha }}
+
+      - name: Checkout the Gitops repository
+        uses: actions/checkout@v4
+        with:
+          repository: fiaisis/gitops
+          token: ${{ secrets.GITOPS_STAGING_EDIT_TOKEN }}
+  
+      - name: Edit the YAML plotting-service file for staging
+        uses: mikefarah/yq@v4.43.1
+        with:
+          cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "plotting-service").image = "ghcr.io/fiaisis/plotting-service@${{ steps.docker_build.outputs.digest }}"' './components/plotting-service/overlays/staging/plotting-service.yml'
+  
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git commit -am "Update plotting-service to use ${{ steps.docker_build.outputs.digest }}"
+          git push
 
   build-and-push-frontend:
     runs-on: ubuntu-latest
@@ -55,8 +74,27 @@ jobs:
 
       - name: Build and push image
         uses: docker/build-push-action@v5
+        id: docker_build
         with:
           file: ./data-viewer/Dockerfile
           context: ./data-viewer
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/data-viewer:${{ github.sha }}
+
+      - name: Checkout the Gitops repository
+        uses: actions/checkout@v4
+        with:
+          repository: fiaisis/gitops
+          token: ${{ secrets.GITOPS_STAGING_EDIT_TOKEN }}
+  
+      - name: Edit the YAML data-viewer file for staging
+        uses: mikefarah/yq@v4.43.1
+        with:
+          cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "data-viewer").image = "ghcr.io/fiaisis/data-viewer@${{ steps.docker_build.outputs.digest }}"' './components/data-viewer/overlays/staging/data-viewer.yml'
+  
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git commit -am "Update data-viewer to use ${{ steps.docker_build.outputs.digest }}"
+          git push
