@@ -24,7 +24,7 @@ logger.info("Starting Plotting Service")
 ALLOWED_ORIGINS = ["*"]
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
-settings.base_dir = Path.resolve(CEPH_DIR)
+settings.base_dir = Path(CEPH_DIR).resolve()
 
 
 app = FastAPI()
