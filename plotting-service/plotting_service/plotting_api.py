@@ -63,6 +63,8 @@ async def check_permissions(request: Request, call_next: Callable[..., Any]) -> 
     experiment_number = re.search(r"%2FRB(\d+)%2F", request.url.query).group(1)
     if request.method == "OPTIONS":
         return await call_next(request)
+    if request.url.split("/")[-1] == "healthz":
+        return await call_next(request)
     token = request.headers.get("Authorization").split(" ")[1]
     try:
         user = get_user_from_token(token)
