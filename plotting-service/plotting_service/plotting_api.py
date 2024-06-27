@@ -6,16 +6,17 @@ import logging
 import os
 import re
 import sys
+import typing
 from pathlib import Path
-from typing import Literal, Callable, Any
 
 from fastapi import FastAPI, HTTPException
 from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 
-from plotting_service.auth import get_user_from_token, get_experiments_for_user
+from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
+from starlette.responses import JSONResponse
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
@@ -43,7 +44,7 @@ app.add_middleware(
 
 
 @app.get("/healthz")
-async def get() -> Literal["ok"]:
+async def get() -> typing.Literal["ok"]:
     """
     Health check endpoint
     \f
@@ -53,20 +54,21 @@ async def get() -> Literal["ok"]:
 
 
 @app.middleware("http")
-async def check_permissions(request: Request, call_next: Callable[..., Any]) -> Any:
+async def check_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:
     """
     Middleware that checks the requestee token has permissions for that experiment
     :param request: The request to check
     :param call_next: The next call (the route function called)
     :return: A response
     """
-    experiment_number = re.search(r"%2FRB(\d+)%2F", request.url.query).group(1)
-
     if request.method == "OPTIONS":
         return await call_next(request)
-    if request.url.path == "healthz":
+    if request.url.path in ("/healthz", "/docs"):
         return await call_next(request)
+
+    experiment_number = re.search(r"%2FRB(\d+)%2F", request.url.query).group(1)
     token = request.headers.get("Authorization").split(" ")[1]
+
     try:
         user = get_user_from_token(token)
     except AuthError:
