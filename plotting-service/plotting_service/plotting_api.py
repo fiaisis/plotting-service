@@ -66,6 +66,7 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     if request.url.path in ("/healthz", "/docs"):
         return await call_next(request)
 
+    logger.info(f"Checking permissions for {request.url.path}")
     experiment_number = re.search(r"%2FRB(\d+)%2F", request.url.query).group(1)
     token = request.headers.get("Authorization").split(" ")[1]
 
@@ -73,9 +74,11 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         user = get_user_from_token(token)
     except AuthError:
         raise HTTPException(403, detail="Forbidden") from None
+    logger.info("Checking role of user")
     if user.role == "staff":
         return await call_next(request)
 
+    logger.info("Checking experiments for user")
     allowed_experiments = get_experiments_for_user(user)
     if experiment_number in allowed_experiments:
         return await call_next(request)

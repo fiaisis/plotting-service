@@ -1,11 +1,10 @@
 """
 Auth functionality
 """
-
+import logging
 import os
 from dataclasses import dataclass
 from typing import Literal
-
 import jwt
 import requests
 from jwt import PyJWTError
@@ -16,7 +15,7 @@ JWT_SECRET = os.environ.get("JWT_SECRET", "shh")
 FIA_AUTH_URL = os.environ.get("FIA_AUTH_URL")
 FIA_AUTH_API_KEY = os.environ.get("FIA_AUTH_API_KEY")
 
-
+logger = logging.getLogger(__name__)
 @dataclass
 class User:
     """
@@ -34,6 +33,7 @@ def get_user_from_token(token: str) -> User:
     :return: The user
     """
     try:
+        logger.info("Getting user from token")
         payload = jwt.decode(
             token,
             JWT_SECRET,
@@ -41,8 +41,10 @@ def get_user_from_token(token: str) -> User:
             options={"verify_signature": True, "verify_exp": True},
         )
         user = User(user_number=payload["user_number"], role=payload["role"])
+        logger.info("Successfuly retrieved user")
         return user
     except PyJWTError as exc:
+        logger.exception("Failed to get user from token")
         raise AuthError() from exc
 
 
