@@ -72,7 +72,7 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     try:
         user = get_user_from_token(token)
     except AuthError:
-        raise HTTPException(403, detail="Forbidden")
+        raise HTTPException(403, detail="Forbidden") from None
     if user.role == "staff":
         return await call_next(request)
 
