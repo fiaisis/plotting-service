@@ -64,7 +64,7 @@ async def check_permissions(request: Request, call_next: Callable[..., Any]) -> 
 
     if request.method == "OPTIONS":
         return await call_next(request)
-    if request.url.path == "/healthz":
+    if request.url.path == "healthz":
         return await call_next(request)
     token = request.headers.get("Authorization").split(" ")[1]
     try:
