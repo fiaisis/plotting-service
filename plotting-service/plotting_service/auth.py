@@ -40,7 +40,7 @@ def get_user_from_token(token: str) -> User:
             algorithms=["HS256"],
             options={"verify_signature": True, "verify_exp": True},
         )
-        user = User(user_number=payload["user_number"], role=payload["role"])
+        user = User(user_number=payload["usernumber"], role=payload["role"])
         logger.info("Successfuly retrieved user")
         return user
     except PyJWTError as exc:
