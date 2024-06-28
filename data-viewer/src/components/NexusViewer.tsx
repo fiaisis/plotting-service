@@ -15,7 +15,7 @@ export default function NexusViewer(props: {
     setHostName(window.location.hostname);
     setProtocol(window.location.protocol);
   }, []);
-
+  const token = localStorage.getItem("scigateway:token");
   const apiUrl =
     props.apiUrl === "http://localhost:8000"
       ? props.apiUrl
@@ -28,6 +28,9 @@ export default function NexusViewer(props: {
       axiosConfig={useMemo(
         () => ({
           params: { file: props.filepath.split("%20").join(" ") },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }),
         [props.filepath],
       )}
