@@ -1,10 +1,13 @@
 """
 Auth functionality
 """
+
 import logging
 import os
 from dataclasses import dataclass
+from http import HTTPStatus
 from typing import Literal
+
 import jwt
 import requests
 from jwt import PyJWTError
@@ -16,6 +19,8 @@ FIA_AUTH_URL = os.environ.get("FIA_AUTH_URL")
 FIA_AUTH_API_KEY = os.environ.get("FIA_AUTH_API_KEY")
 
 logger = logging.getLogger(__name__)
+
+
 @dataclass
 class User:
     """
@@ -57,7 +62,8 @@ def get_experiments_for_user(user: User) -> list[int]:
     response = requests.get(
         f"{FIA_AUTH_URL}/experiment?user_number={user.user_number}",
         headers={"Authorization": f"Bearer {FIA_AUTH_API_KEY}"},
+        timeout=30,
     )
-    if response.status_code == 200:
+    if response.status_code == HTTPStatus.OK:
         return response.json()
     raise RuntimeError("Could not contact the auth api")
