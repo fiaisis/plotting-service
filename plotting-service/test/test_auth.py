@@ -23,7 +23,7 @@ def test_get_experiment_for_user(mock_get):
 
 @patch("plotting_service.auth.requests.get")
 def test_get_experiments_for_user_non_200_status(mock_get):
-    mock_get.return_value.status_code = 403
+    mock_get.return_value.status_code = HTTPStatus.FORBIDDEN
 
     with pytest.raises(RuntimeError):
         get_experiments_for_user(user=User(user_number=123, role="user"))
