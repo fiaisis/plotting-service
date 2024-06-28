@@ -79,7 +79,12 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         )
         raise HTTPException(400, "Request missing experiment number")
 
+    auth_header = request.headers.get("Authorization")
+    if auth_header is None:
+        raise HTTPException(401, "Unauthenticated")
+
     token = request.headers.get("Authorization").split(" ")[1]
+
 
     try:
         user = get_user_from_token(token)
