@@ -16,7 +16,6 @@ from starlette.requests import Request
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
-from starlette.responses import JSONResponse
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
@@ -31,6 +30,7 @@ ALLOWED_ORIGINS = ["*"]
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
+DEV_MODE = bool(os.environ.get("DEV_MODE", False))
 
 
 app = FastAPI()
@@ -61,6 +61,8 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     :param call_next: The next call (the route function called)
     :return: A response
     """
+    if DEV_MODE:
+        return await call_next(request)
     if request.method == "OPTIONS":
         return await call_next(request)
     if request.url.path in ("/healthz", "/docs"):

@@ -30,6 +30,7 @@ jobs:
       - name: Start backend
         env:
           CEPH_DIR: /home/runner/work/plotting-service/plotting-service/plotting-service/test/test_ceph
+	  DEV_MODE: True
         run: uvicorn plotting_service.plotting_api:app &
 
       - name: cypress-run
