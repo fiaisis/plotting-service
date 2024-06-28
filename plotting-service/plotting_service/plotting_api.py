@@ -85,7 +85,6 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
 
     token = auth_header.split(" ")[1]
 
-
     try:
         user = get_user_from_token(token)
     except AuthError:
