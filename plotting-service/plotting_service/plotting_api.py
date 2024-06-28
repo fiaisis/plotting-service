@@ -83,7 +83,7 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     if auth_header is None:
         raise HTTPException(401, "Unauthenticated")
 
-    token = request.headers.get("Authorization").split(" ")[1]
+    token = auth_header.split(" ")[1]
 
 
     try:
