@@ -14,7 +14,7 @@ TOKEN = (
 
 @patch("plotting_service.auth.requests.get")
 def test_get_experiment_for_user(mock_get):
-    mock_get.return_value.status_code = 200
+    mock_get.return_value.status_code = HTTPStatus.OK
     mock_get.return_value.json.return_value = [1234]
 
     exp_numbs = get_experiments_for_user(user=User(user_number=123, role="user"))
