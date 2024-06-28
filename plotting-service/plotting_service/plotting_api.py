@@ -69,7 +69,16 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         return await call_next(request)
 
     logger.info(f"Checking permissions for {request.url.path}")
-    experiment_number = re.search(r"%2FRB(\d+)%2F", request.url.query).group(1)
+    match = re.search(r"%2FRB(\d+)%2F", request.url.query)
+    if match is not None:
+        experiment_number = match.group(1)
+    else:
+        logger.warning(
+            f"The requested nexus metadata path {request.url.path} does not include an experiment number. Permissions "
+            f"cannot be checked"
+        )
+        raise HTTPException(400, "Request missing experiment number")
+
     token = request.headers.get("Authorization").split(" ")[1]
 
     try:

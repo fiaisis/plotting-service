@@ -65,5 +65,6 @@ def get_experiments_for_user(user: User) -> list[int]:
         timeout=30,
     )
     if response.status_code == HTTPStatus.OK:
-        return response.json()
+        experiment_numbers: list[int] = response.json()
+        return experiment_numbers
     raise RuntimeError("Could not contact the auth api")
