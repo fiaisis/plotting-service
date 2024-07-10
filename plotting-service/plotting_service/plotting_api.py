@@ -56,6 +56,10 @@ async def get() -> typing.Literal["ok"]:
 
 @app.get("/text/instrument/{instrument}/experiment_number/{experiment_number}", response_class=PlainTextResponse)
 async def get_text_file(instrument: str, experiment_number: int, filename: str) -> str:
+    if ("/" in instrument or "\\" in instrument) or ("/" in filename or "\\" in filename):
+        logger.warning("Possible directory traversal attack")
+        raise HTTPException(status_code=400)
+
     path = (
         Path(CEPH_DIR)
         .joinpath(instrument.upper(), "RBNumber", f"RB{experiment_number}", "autoreduced", filename)
@@ -88,7 +92,7 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     else:
         match = re.search(r"%2FRB(\d+)%2F", request.url.query)
         if match is not None:
-            experiment_number = match.group(1)
+            experiment_number = int(match.group(1))
         else:
             logger.warning(
                 f"The requested nexus metadata path {request.url.path} does not include an experiment number. "
