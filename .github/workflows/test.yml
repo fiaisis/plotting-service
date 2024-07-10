@@ -1,5 +1,8 @@
 ---
-on: push
+name: Run tests
+
+on: 
+  push:
 
 permissions:
   contents: read
