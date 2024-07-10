@@ -55,19 +55,12 @@ async def get() -> typing.Literal["ok"]:
     return "ok"
 
 
-def is_safe_path(path: Path) -> bool:
-    base_dir = Path(CEPH_DIR).resolve()
-    user_path = path.resolve()
-
-    return base_dir in user_path.parents
-
-
 @app.get("/text/instrument/{instrument}/experiment_number/{experiment_number}", response_class=PlainTextResponse)
 async def get_text_file(instrument: str, experiment_number: int, filename: str) -> str:
-    path = Path(CEPH_DIR) / instrument.upper() / "RBNumber" / f"RB{experiment_number}" / "autoreduced" / filename
-
-    if not is_safe_path(path):
+    if ".." in instrument or ".." in filename:
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
+
+    path = Path(CEPH_DIR) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced/{filename}"
 
     with path.open("r") as file:
         return file.read()
