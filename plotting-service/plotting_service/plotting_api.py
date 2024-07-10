@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
-CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
+CEPH_DIR = os.environ.get("CEPH_DIR", "/Users/sham/work/plotting-service/plotting-service/test/test_ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = bool(os.environ.get("DEV_MODE", False))
@@ -87,8 +87,8 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
             experiment_number = match.group(1)
         else:
             logger.warning(
-                f"The requested nexus metadata path {request.url.path} does not include an experiment number. Permissions "
-                f"cannot be checked"
+                f"The requested nexus metadata path {request.url.path} does not include an experiment number. "
+                f"Permissions cannot be checked"
             )
             raise HTTPException(400, "Request missing experiment number")
 
