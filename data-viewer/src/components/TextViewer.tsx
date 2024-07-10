@@ -1,6 +1,10 @@
 "use client";
 const getText = async (url: string) => {
-  return await fetch(url)
+  const token = localStorage.getItem("scigateway:token") ?? "";
+  return await fetch(url, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  })
     .then((res) => {
       if (!res.ok) {
         throw new Error(res.statusText);
