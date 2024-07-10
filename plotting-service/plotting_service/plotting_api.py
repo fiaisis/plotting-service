@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
-CEPH_DIR = os.environ.get("CEPH_DIR", "/Users/sham/work/plotting-service/plotting-service/test/test_ceph")
+CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = bool(os.environ.get("DEV_MODE", False))
