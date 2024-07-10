@@ -57,7 +57,14 @@ async def get() -> typing.Literal["ok"]:
 
 @app.get("/text/instrument/{instrument}/experiment_number/{experiment_number}", response_class=PlainTextResponse)
 async def get_text_file(instrument: str, experiment_number: int, filename: str) -> str:
-    if ".." in instrument or ".." in filename:
+    if (
+        ".." in instrument
+        or ".." in filename
+        or "/" in instrument
+        or "/" in filename
+        or "\\" in instrument
+        or "\\" in filename
+    ):
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
 
     path = Path(CEPH_DIR) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced/{filename}"
