@@ -1,3 +1,4 @@
+"use client";
 const getText = async (url: string) => {
   return await fetch(url)
     .then((res) => {
