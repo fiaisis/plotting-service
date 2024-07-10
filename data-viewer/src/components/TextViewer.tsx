@@ -26,7 +26,7 @@ const TextViewer = (props: {
       })
       .then((resultText) => setText(resultText))
       .catch((_) => setText("something went wrong"));
-  }, [text]);
+  }, []);
 
   return (
     <div>
