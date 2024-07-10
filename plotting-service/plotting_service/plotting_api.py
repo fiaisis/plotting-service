@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException
 from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
+from starlette.responses import PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
@@ -53,6 +54,14 @@ async def get() -> typing.Literal["ok"]:
     return "ok"
 
 
+@app.get("/text/instrument/{instrument}/experiment_number/{experiment_number}", response_class=PlainTextResponse)
+async def get_text_file(instrument: str, experiment_number: str, filename: str) -> str:
+    with (Path(CEPH_DIR) / instrument.upper() / "RBNumber" / f"RB{experiment_number}" / "autoreduced" / filename).open(
+        "r"
+    ) as file:
+        return file.read()
+
+
 @app.middleware("http")
 async def check_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:
     """
@@ -69,15 +78,19 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         return await call_next(request)
 
     logger.info(f"Checking permissions for {request.url.path}")
-    match = re.search(r"%2FRB(\d+)%2F", request.url.query)
-    if match is not None:
-        experiment_number = match.group(1)
+
+    if request.url.path.startswith("/text"):
+        experiment_number = request.url.path.split("/")[-1]
     else:
-        logger.warning(
-            f"The requested nexus metadata path {request.url.path} does not include an experiment number. Permissions "
-            f"cannot be checked"
-        )
-        raise HTTPException(400, "Request missing experiment number")
+        match = re.search(r"%2FRB(\d+)%2F", request.url.query)
+        if match is not None:
+            experiment_number = match.group(1)
+        else:
+            logger.warning(
+                f"The requested nexus metadata path {request.url.path} does not include an experiment number. Permissions "
+                f"cannot be checked"
+            )
+            raise HTTPException(400, "Request missing experiment number")
 
     auth_header = request.headers.get("Authorization")
     if auth_header is None:
