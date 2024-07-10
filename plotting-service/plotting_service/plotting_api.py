@@ -55,10 +55,14 @@ async def get() -> typing.Literal["ok"]:
 
 
 @app.get("/text/instrument/{instrument}/experiment_number/{experiment_number}", response_class=PlainTextResponse)
-async def get_text_file(instrument: str, experiment_number: str, filename: str) -> str:
-    with (Path(CEPH_DIR) / instrument.upper() / "RBNumber" / f"RB{experiment_number}" / "autoreduced" / filename).open(
-        "r"
-    ) as file:
+async def get_text_file(instrument: str, experiment_number: int, filename: str) -> str:
+    path = (
+        Path(CEPH_DIR)
+        .joinpath(instrument.upper(), "RBNumber", f"RB{experiment_number}", "autoreduced", filename)
+        .relative_to(CEPH_DIR)
+    )
+
+    with path.open("r") as file:
         return file.read()
 
 
