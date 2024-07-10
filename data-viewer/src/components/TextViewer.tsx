@@ -1,28 +1,33 @@
 "use client";
-const getText = async (url: string) => {
-  const token = localStorage.getItem("scigateway:token") ?? "";
-  return await fetch(url, {
-    method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
-  })
-    .then((res) => {
-      if (!res.ok) {
-        throw new Error(res.statusText);
-      }
-      return res.text();
-    })
-    .catch((_) => "something went wrong");
-};
+import { useEffect, useState } from "react";
 
-const TextViewer = async (props: {
+const TextViewer = (props: {
   filename: string;
   instrument: string;
   experimentNumber: string;
   apiUrl: string;
 }) => {
-  const text = await getText(
-    `${props.apiUrl}/text/instrument/${props.instrument}/experiment_number/${props.experimentNumber}?filename=${props.filename}`,
-  );
+  const [text, setText] = useState<string>("loading...");
+
+  useEffect(() => {
+    const token = localStorage.getItem("scigateway:token") ?? "";
+    fetch(
+      `${props.apiUrl}/text/instrument/${props.instrument}/experiment_number/${props.experimentNumber}?filename=${props.filename}`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    )
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(res.statusText);
+        }
+        return res.text();
+      })
+      .then((resultText) => setText(resultText))
+      .catch((_) => setText("something went wrong"));
+  }, [text]);
+
   return (
     <div>
       <pre>{text}</pre>
