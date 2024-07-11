@@ -18,7 +18,7 @@ export default function NexusViewer(props: {
   }, []);
   useEffect(() => {
     setToken(localStorage.getItem("scigateway:token") ?? "");
-  }, [token]);
+  }, []);
   const apiUrl =
     props.apiUrl === "http://localhost:8000"
       ? props.apiUrl
