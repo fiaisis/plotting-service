@@ -32,6 +32,8 @@ jobs:
           CEPH_DIR: /home/runner/work/plotting-service/plotting-service/plotting-service/test/test_ceph
           DEV_MODE: True
         run: uvicorn plotting_service.plotting_api:app &
+      # We do this as the current config has production specific values (e.g. proxy and build output type)
+      # and we want defaults for testing.
       - name: Remove production config
         run: rm data-viewer/next.config.mjs
       - name: cypress-run

@@ -95,7 +95,7 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     logger.info(f"Checking permissions for {request.url.path}")
 
     if request.url.path.startswith("/text"):
-        experiment_number = request.url.path.split("/")[-1]
+        experiment_number = int(request.url.path.split("/")[-1])
     else:
         match = re.search(r"%2FRB(\d+)%2F", request.url.query)
         if match is not None:
