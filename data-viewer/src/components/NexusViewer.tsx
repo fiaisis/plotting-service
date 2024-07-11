@@ -11,11 +11,14 @@ export default function NexusViewer(props: {
   // Typically, we expect API_URL env var to be /plottingapi in staging and production
   const [hostName, setHostName] = useState<string>("");
   const [protocol, setProtocol] = useState<string>("http");
+  const [token, setToken] = useState<string>("");
   useEffect(() => {
     setHostName(window.location.hostname);
     setProtocol(window.location.protocol);
   }, []);
-  const token = localStorage.getItem("scigateway:token");
+  useEffect(() => {
+    setToken(localStorage.getItem("scigateway:token") ?? "");
+  }, [token]);
   const apiUrl =
     props.apiUrl === "http://localhost:8000"
       ? props.apiUrl

@@ -32,9 +32,8 @@ jobs:
           CEPH_DIR: /home/runner/work/plotting-service/plotting-service/plotting-service/test/test_ceph
           DEV_MODE: True
         run: uvicorn plotting_service.plotting_api:app &
-      - name: Remove config var
-        run: |
-          sed -i '/standalone/d' data-viewer/next.config.mjs
+      - name: Remove production config
+        run: rm data-viewer/next.config.mjs
       - name: cypress-run
         uses: cypress-io/github-action@v6
         with:
