@@ -57,6 +57,8 @@ async def get() -> typing.Literal["ok"]:
 
 @app.get("/text/instrument/{instrument}/experiment_number/{experiment_number}", response_class=PlainTextResponse)
 async def get_text_file(instrument: str, experiment_number: int, filename: str) -> str:
+    # we don't check experiment number as it is an int and pydantic wont process any non int type and return a 422
+    # automatically
     if (
         ".." in instrument
         or ".." in filename
@@ -64,6 +66,8 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
         or "/" in filename
         or "\\" in instrument
         or "\\" in filename
+        or "~" in instrument
+        or "~" in filename
     ):
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
 
