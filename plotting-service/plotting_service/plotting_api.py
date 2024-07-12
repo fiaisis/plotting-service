@@ -7,12 +7,14 @@ import os
 import re
 import sys
 import typing
+from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
+from starlette.responses import PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
@@ -53,6 +55,28 @@ async def get() -> typing.Literal["ok"]:
     return "ok"
 
 
+@app.get("/text/instrument/{instrument}/experiment_number/{experiment_number}", response_class=PlainTextResponse)
+async def get_text_file(instrument: str, experiment_number: int, filename: str) -> str:
+    # we don't check experiment number as it is an int and pydantic wont process any non int type and return a 422
+    # automatically
+    if (
+        ".." in instrument
+        or ".." in filename
+        or "/" in instrument
+        or "/" in filename
+        or "\\" in instrument
+        or "\\" in filename
+        or "~" in instrument
+        or "~" in filename
+    ):
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
+
+    path = Path(CEPH_DIR) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced/{filename}"
+
+    with path.open("r") as file:
+        return file.read()
+
+
 @app.middleware("http")
 async def check_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:
     """
@@ -69,15 +93,19 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         return await call_next(request)
 
     logger.info(f"Checking permissions for {request.url.path}")
-    match = re.search(r"%2FRB(\d+)%2F", request.url.query)
-    if match is not None:
-        experiment_number = match.group(1)
+
+    if request.url.path.startswith("/text"):
+        experiment_number = int(request.url.path.split("/")[-1])
     else:
-        logger.warning(
-            f"The requested nexus metadata path {request.url.path} does not include an experiment number. Permissions "
-            f"cannot be checked"
-        )
-        raise HTTPException(400, "Request missing experiment number")
+        match = re.search(r"%2FRB(\d+)%2F", request.url.query)
+        if match is not None:
+            experiment_number = int(match.group(1))
+        else:
+            logger.warning(
+                f"The requested nexus metadata path {request.url.path} does not include an experiment number. "
+                f"Permissions cannot be checked"
+            )
+            raise HTTPException(400, "Request missing experiment number")
 
     auth_header = request.headers.get("Authorization")
     if auth_header is None:

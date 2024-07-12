@@ -18,10 +18,10 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "cypress": "^13.11.0",
+    "cypress": "^13.13.0",
     "eslint": "^9",
     "eslint-config-next": "14.2.3",
-    "prettier": "^3.3.0",
+    "prettier": "^3.3.2",
     "typescript": "^5"
   }
 }
