@@ -30,7 +30,7 @@ jobs:
 
       - name: Build and push image
         id: plotting_service_build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           file: ./plotting-service/Dockerfile
           context: ./plotting-service
@@ -38,7 +38,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/plotting-service:${{ github.sha }}
       
       - name: Build and push image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         id: data_viewer_build
         with:
           file: ./data-viewer/Dockerfile
@@ -53,12 +53,12 @@ jobs:
           token: ${{ secrets.GITOPS_STAGING_EDIT_TOKEN }}
   
       - name: Edit the YAML plotting-service file for staging
-        uses: mikefarah/yq@v4.44.1
+        uses: mikefarah/yq@v4.44.2
         with:
           cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "plotting-service").image = "ghcr.io/fiaisis/plotting-service@${{ steps.plotting_service_build.outputs.digest }}"' './components/plotting-service/envs/staging/plotting-service.yml'
   
       - name: Edit the YAML data-viewer file for staging
-        uses: mikefarah/yq@v4.44.1
+        uses: mikefarah/yq@v4.44.2
         with:
           cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "data-viewer").image = "ghcr.io/fiaisis/data-viewer@${{ steps.data_viewer_build.outputs.digest }}"' './components/data-viewer/envs/staging/data-viewer.yml'
   
