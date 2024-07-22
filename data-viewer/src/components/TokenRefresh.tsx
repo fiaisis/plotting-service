@@ -3,7 +3,6 @@ import { useEffect } from "react";
 
 const TokenRefresh = () => {
   useEffect(() => {
-    // Function to send the POST request
     const token = localStorage.getItem("scigateway:token");
     fetch("/auth/refresh", {
       method: "POST",
@@ -11,7 +10,10 @@ const TokenRefresh = () => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ token: token }),
-    }).catch((e) => console.error(e));
+    })
+      .then((response) => response.json())
+      .then((data) => localStorage.setItem("scigateway:token", data.token))
+      .catch((_) => console.error("Could not refresh token"));
   }, []);
 
   return <></>;
