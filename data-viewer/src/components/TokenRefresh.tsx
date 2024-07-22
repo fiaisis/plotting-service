@@ -4,7 +4,7 @@ import { useEffect } from "react";
 const TokenRefresh = () => {
   useEffect(() => {
     const token = localStorage.getItem("scigateway:token");
-    fetch("/auth/refresh", {
+    fetch("/auth/api/jwt/refresh", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
