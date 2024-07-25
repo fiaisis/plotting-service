@@ -14,6 +14,7 @@ const Fallback = () => (
       height: "100vh",
     }}
   >
+    <img src={"/monkey.webp"} alt={"Monkey holding excellent website award"} />
     <h1>Something Went Wrong</h1>
     <p>
       Return <a href={"https://reduce.isis.cclrc.ac.uk"}>Home</a>
