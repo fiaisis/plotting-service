@@ -11,6 +11,7 @@ export default function NexusViewer(props: {
   // Typically, we expect API_URL env var to be /plottingapi in staging and production
   const [hostName, setHostName] = useState<string>("");
   const [protocol, setProtocol] = useState<string>("http");
+  const filePath = props.filepath.split("%20").join(" ").split("%2").join(",");
   useEffect(() => {
     setHostName(window.location.hostname);
     setProtocol(window.location.protocol);
@@ -24,15 +25,15 @@ export default function NexusViewer(props: {
   return (
     <H5GroveProvider
       url={apiUrl}
-      filepath={props.filepath.split("%20").join(" ")}
+      filepath={filePath}
       axiosConfig={useMemo(
         () => ({
-          params: { file: props.filepath.split("%20").join(" ") },
+          params: { file: filePath },
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }),
-        [props.filepath],
+        [filePath],
       )}
     >
       <App />
