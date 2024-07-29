@@ -11,7 +11,7 @@ export default function NexusViewer(props: {
   // Typically, we expect API_URL env var to be /plottingapi in staging and production
   const [hostName, setHostName] = useState<string>("");
   const [protocol, setProtocol] = useState<string>("http");
-  const filePath = props.filepath.split("%20").join(" ").split("%2").join(",");
+  const filePath = props.filepath.split("%20").join(" ").split("%2C").join(",");
   useEffect(() => {
     setHostName(window.location.hostname);
     setProtocol(window.location.protocol);
