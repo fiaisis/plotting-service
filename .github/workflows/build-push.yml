@@ -53,12 +53,12 @@ jobs:
           token: ${{ secrets.GITOPS_STAGING_EDIT_TOKEN }}
   
       - name: Edit the YAML plotting-service file for staging
-        uses: mikefarah/yq@v4.44.2
+        uses: mikefarah/yq@v4.44.3
         with:
           cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "plotting-service").image = "ghcr.io/fiaisis/plotting-service@${{ steps.plotting_service_build.outputs.digest }}"' './components/plotting-service/envs/staging/plotting-service.yml'
   
       - name: Edit the YAML data-viewer file for staging
-        uses: mikefarah/yq@v4.44.2
+        uses: mikefarah/yq@v4.44.3
         with:
           cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "data-viewer").image = "ghcr.io/fiaisis/data-viewer@${{ steps.data_viewer_build.outputs.digest }}"' './components/data-viewer/envs/staging/data-viewer.yml'
   
