@@ -41,6 +41,12 @@ jobs:
           CEPH_DIR: /home/runner/work/plotting-service/plotting-service/plotting-service/test/test_ceph
           DEV_MODE: True
         run: uvicorn plotting_service.plotting_api:app &
+
+      - name: Create archive for tests
+        run: |
+          mkdir -p /ceph/MARI/RBNumber/RB20024/autoreduced 
+          touch /ceph/MARI/RBNumber/RB20024/autoreduced/MAR29531 10.5meV_sa.nxspe
+
       # We do this as the current config has production specific values (e.g. proxy and build output type)
       # and we want defaults for testing.
       - name: Remove production config
