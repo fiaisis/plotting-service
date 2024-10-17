@@ -6,6 +6,7 @@ from starlette.requests import Request
 
 from plotting_service.plotting_api import logger
 
+
 def find_file(ceph_dir: str, instrument: str, experiment_number: int, filename: str) -> Path | None:
     # Run normal check
     basic_path = Path(ceph_dir) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced/{filename}"

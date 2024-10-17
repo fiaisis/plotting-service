@@ -17,7 +17,7 @@ from starlette.responses import PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
-from plotting_service.utils import find_file, find_experiment_number
+from plotting_service.utils import find_experiment_number, find_file
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(

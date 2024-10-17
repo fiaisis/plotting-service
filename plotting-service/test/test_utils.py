@@ -23,7 +23,15 @@ def test_find_file_in_a_dir():
         instrument_name = "FUN_INST"
         experiment_number = 1231234
         filename = "MAR1912991240_asa_dasd_123.nxspe"
-        path = Path(tmpdir) / instrument_name / "RBNumber" / f"RB{experiment_number}" / "autoreduced" / "run-123141"/ filename
+        path = (
+            Path(tmpdir)
+            / instrument_name
+            / "RBNumber"
+            / f"RB{experiment_number}"
+            / "autoreduced"
+            / "run-123141"
+            / filename
+        )
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("Hello World!")
 
