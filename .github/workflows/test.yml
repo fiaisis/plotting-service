@@ -48,6 +48,7 @@ jobs:
         run: |
           mkdir -p $CEPH_DIR/MARI/RBNumber/RB20024/autoreduced 
           touch $CEPH_DIR/MARI/RBNumber/RB20024/autoreduced/MAR29531 10.5meV_sa.nxspe
+          touch $CEPH_DIR/MARI/RBNumber/RB20024/autoreduced/MAR29531_10.5meV_sa.nxspe
 
       # We do this as the current config has production specific values (e.g. proxy and build output type)
       # and we want defaults for testing.
