@@ -4,7 +4,6 @@ Main module
 
 import logging
 import os
-import re
 import sys
 import typing
 from http import HTTPStatus
@@ -18,7 +17,7 @@ from starlette.responses import PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
-from plotting_service.utils import find_file
+from plotting_service.utils import find_file, find_experiment_number
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
@@ -109,27 +108,7 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         return await call_next(request)
 
     logger.info(f"Checking permissions for {request.url.path}")
-
-    if request.url.path.startswith("/text"):
-        experiment_number = int(request.url.path.split("/")[-1])
-    elif request.url.path.startswith("/find_file"):
-        url_parts = request.url.path.split("/")
-        last_part_seen = url_parts[-1]
-        for part in reversed(url_parts):
-            if "experiment_number" in part:
-                experiment_number = int(last_part_seen)
-            else:
-                last_part_seen = part
-    else:
-        match = re.search(r"%2FRB(\d+)%2F", request.url.query)
-        if match is not None:
-            experiment_number = int(match.group(1))
-        else:
-            logger.warning(
-                f"The requested nexus metadata path {request.url.path} does not include an experiment number. "
-                f"Permissions cannot be checked"
-            )
-            raise HTTPException(400, "Request missing experiment number")
+    experiment_number = find_experiment_number(request)
 
     auth_header = request.headers.get("Authorization")
     if auth_header is None:
