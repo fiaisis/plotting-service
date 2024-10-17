@@ -1,20 +1,39 @@
 import re
+from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from plotting_service.plotting_api import logger
 
 
 def find_file(ceph_dir: str, instrument: str, experiment_number: int, filename: str) -> Path | None:
     # Run normal check
     basic_path = Path(ceph_dir) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced/{filename}"
+
+    # Do a check as we are handling user entered data here
+    try:
+        basic_path.resolve(strict=True)
+        if not basic_path.is_relative_to(ceph_dir):
+            raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Invalid path being accessed.")
+    except OSError:
+        # The OSError can be raised semi-regularly by basic_path.resolve when it can't find it.
+        pass
+
     if basic_path.exists():
         return basic_path
 
     # Attempt to find file in autoreduced folder
     autoreduced_folder = Path(ceph_dir) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced"
+
+    # Do a check as we are handling user entered data here
+    try:
+        autoreduced_folder.resolve(strict=True)
+        if not autoreduced_folder.is_relative_to(ceph_dir):
+            raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Invalid path being accessed")
+    except OSError:
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Invalid path being accessed.") from None
+
     if autoreduced_folder.exists():
         found_paths = list(autoreduced_folder.rglob(filename))
         if len(found_paths) > 0 and found_paths[0].exists():
@@ -36,6 +55,8 @@ def find_experiment_number(request: Request) -> int:
             else:
                 last_part_seen = part
         if experiment_number is None:
+            # Avoiding circular import
+            from plotting_service.plotting_api import logger
             logger.warning(
                 f"The requested path {request.url.path} does not include an experiment number. "
                 f"Permissions cannot be checked"
@@ -46,6 +67,8 @@ def find_experiment_number(request: Request) -> int:
         if match is not None:
             experiment_number = int(match.group(1))
         else:
+            # Avoiding circular import
+            from plotting_service.plotting_api import logger
             logger.warning(
                 f"The requested nexus metadata path {request.url.path} does not include an experiment number. "
                 f"Permissions cannot be checked"
