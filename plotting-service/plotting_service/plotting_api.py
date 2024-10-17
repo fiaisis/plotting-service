@@ -18,6 +18,7 @@ from starlette.responses import PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
+from plotting_service.utils import find_file
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
@@ -71,10 +72,25 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
     ):
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
 
-    path = Path(CEPH_DIR) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced/{filename}"
+    path = find_file(CEPH_DIR, instrument, experiment_number, filename)
+    if path is None:
+        logger.error("Could not find the file requested.")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
 
     with path.open("r") as file:
         return file.read()
+
+
+@app.get("/find_file/instrument/{instrument}/experiment_number/{experiment_number}")
+async def find_file_get(instrument: str, experiment_number: int, filename: str) -> str:
+    path = find_file(CEPH_DIR, instrument, experiment_number, filename)
+    if path is None:
+        logger.error("Could not find the file requested.")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
+    # Remove /ceph
+    if "ceph" in path.parts[1]:
+        path = Path(*path.parts[2:])
+    return str(path)
 
 
 @app.middleware("http")
@@ -96,6 +112,14 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
 
     if request.url.path.startswith("/text"):
         experiment_number = int(request.url.path.split("/")[-1])
+    elif request.url.path.startswith("/find_file"):
+        url_parts = request.url.path.split("/")
+        last_part_seen = url_parts[-1]
+        for part in reversed(url_parts):
+            if "experiment_number" in part:
+                experiment_number = int(last_part_seen)
+            else:
+                last_part_seen = part
     else:
         match = re.search(r"%2FRB(\d+)%2F", request.url.query)
         if match is not None:
