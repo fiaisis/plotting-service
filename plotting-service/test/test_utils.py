@@ -1,12 +1,11 @@
-from unittest import mock
-
-from fastapi import HTTPException
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest import mock
 
 import pytest
+from fastapi import HTTPException
 
-from plotting_service.utils import find_file, find_experiment_number
+from plotting_service.utils import find_experiment_number, find_file
 
 
 def test_find_most_likely_file():

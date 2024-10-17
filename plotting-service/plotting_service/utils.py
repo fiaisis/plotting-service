@@ -6,7 +6,6 @@ from fastapi import HTTPException
 from starlette.requests import Request
 
 
-
 def find_file(ceph_dir: str, instrument: str, experiment_number: int, filename: str) -> Path | None:
     # Run normal check
     basic_path = Path(ceph_dir) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced/{filename}"
@@ -57,6 +56,7 @@ def find_experiment_number(request: Request) -> int:
         if experiment_number is None:
             # Avoiding circular import
             from plotting_service.plotting_api import logger
+
             logger.warning(
                 f"The requested path {request.url.path} does not include an experiment number. "
                 f"Permissions cannot be checked"
@@ -69,6 +69,7 @@ def find_experiment_number(request: Request) -> int:
         else:
             # Avoiding circular import
             from plotting_service.plotting_api import logger
+
             logger.warning(
                 f"The requested nexus metadata path {request.url.path} does not include an experiment number. "
                 f"Permissions cannot be checked"
