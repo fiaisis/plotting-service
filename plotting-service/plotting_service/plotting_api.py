@@ -4,7 +4,6 @@ Main module
 
 import logging
 import os
-import re
 import sys
 import typing
 from http import HTTPStatus
@@ -18,6 +17,7 @@ from starlette.responses import PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
+from plotting_service.utils import find_experiment_number, find_file
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
@@ -71,10 +71,32 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
     ):
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
 
-    path = Path(CEPH_DIR) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced/{filename}"
+    path = find_file(CEPH_DIR, instrument, experiment_number, filename)
+    if path is None:
+        logger.error("Could not find the file requested.")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
 
     with path.open("r") as file:
         return file.read()
+
+
+@app.get("/find_file/instrument/{instrument}/experiment_number/{experiment_number}")
+async def find_file_get(instrument: str, experiment_number: int, filename: str) -> str:
+    """
+    Return the relative path to the env var CEPH_DIR that leads to the requested file if one exists.
+    :param instrument: Instrument the file belongs to.
+    :param experiment_number: Experiment number the file belongs to.
+    :param filename: Filename to find.
+    :return: The relative path to the file in the CEPH_DIR env var.
+    """
+    path = find_file(CEPH_DIR, instrument, experiment_number, filename)
+    if path is None:
+        logger.error("Could not find the file requested.")
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
+    # Remove CEPH_DIR
+    if path.is_relative_to(CEPH_DIR):
+        path = path.relative_to(CEPH_DIR)
+    return str(path)
 
 
 @app.middleware("http")
@@ -93,19 +115,7 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         return await call_next(request)
 
     logger.info(f"Checking permissions for {request.url.path}")
-
-    if request.url.path.startswith("/text"):
-        experiment_number = int(request.url.path.split("/")[-1])
-    else:
-        match = re.search(r"%2FRB(\d+)%2F", request.url.query)
-        if match is not None:
-            experiment_number = int(match.group(1))
-        else:
-            logger.warning(
-                f"The requested nexus metadata path {request.url.path} does not include an experiment number. "
-                f"Permissions cannot be checked"
-            )
-            raise HTTPException(400, "Request missing experiment number")
+    experiment_number = find_experiment_number(request)
 
     auth_header = request.headers.get("Authorization")
     if auth_header is None:

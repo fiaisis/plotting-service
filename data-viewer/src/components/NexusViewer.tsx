@@ -27,36 +27,59 @@ const Fallback = () => (
 );
 
 export default function NexusViewer(props: {
-  filepath: string;
+  filename: string;
+  instrument: string;
+  experimentNumber: string;
   apiUrl: string;
 }) {
   // We need to turn the env var into a full url as the h5provider can not take just the route.
   // Typically, we expect API_URL env var to be /plottingapi in staging and production
   const [hostName, setHostName] = useState<string>("");
   const [protocol, setProtocol] = useState<string>("http");
+  const [filepath, setFilePath] = useState<string>("");
+  const [token, setToken] = useState<string>("");
   useEffect(() => {
     setHostName(window.location.hostname);
     setProtocol(window.location.protocol);
+    setToken(localStorage.getItem("scigateway:token") ?? "");
   }, []);
-  const token = localStorage.getItem("scigateway:token");
-  const apiUrl =
+    const groveApiUrl =
     props.apiUrl === "http://localhost:8000"
       ? props.apiUrl
       : `${protocol}//${hostName}/plottingapi`;
+  const fileQueryUrl = `${props.apiUrl}/find_file/instrument/${props.instrument}/experiment_number/${props.experimentNumber}`
+  const fileQueryParams = `filename=${props.filename}`;
 
+  useEffect(() => {
+    const headers: { [key: string]: string } = {'Content-Type': 'application/json'};
+    if (token != "") {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    fetch(`${fileQueryUrl}?${fileQueryParams}`, {method: 'GET', headers})
+      .then((res) => {
+            if (!res.ok) {
+              throw new Error(res.statusText);
+            }
+            return res.text();
+      })
+      .then((data) => {
+          const filepath_to_use = data.replace(/"/g, "")
+          setFilePath(filepath_to_use);
+      })
+  }, [])
   return (
     <ErrorBoundary FallbackComponent={Fallback}>
       <H5GroveProvider
-        url={apiUrl}
-        filepath={props.filepath.split("%20").join(" ")}
+        url={groveApiUrl}
+        filepath={filepath}
         axiosConfig={useMemo(
           () => ({
-            params: { file: props.filepath.split("%20").join(" ") },
+            params: { file: filepath },
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }),
-          [props.filepath],
+          [filepath],
         )}
       >
         <App propagateErrors />
