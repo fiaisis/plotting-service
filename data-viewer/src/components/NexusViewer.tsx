@@ -37,12 +37,13 @@ export default function NexusViewer(props: {
   const [hostName, setHostName] = useState<string>("");
   const [protocol, setProtocol] = useState<string>("http");
   const [filepath, setFilePath] = useState<string>("");
+  const [token, setToken] = useState<string>("");
   useEffect(() => {
     setHostName(window.location.hostname);
     setProtocol(window.location.protocol);
+    setToken(localStorage.getItem("scigateway:token") ?? "");
   }, []);
-  const token = localStorage.getItem("scigateway:token") ?? "";
-  const groveApiUrl =
+    const groveApiUrl =
     props.apiUrl === "http://localhost:8000"
       ? props.apiUrl
       : `${protocol}//${hostName}/plottingapi`;
@@ -62,17 +63,18 @@ export default function NexusViewer(props: {
             return res.text();
       })
       .then((data) => {
-        setFilePath(data);
+          const filepath_to_use = data.replace(/"/g, "")
+          setFilePath(filepath_to_use);
       })
   }, [])
   return (
     <ErrorBoundary FallbackComponent={Fallback}>
       <H5GroveProvider
         url={groveApiUrl}
-        filepath={filepath.split("%20").join(" ")}
+        filepath={filepath}
         axiosConfig={useMemo(
           () => ({
-            params: { file: filepath.split("%20").join(" ").replace(/"/g, "") },
+            params: { file: filepath },
             headers: {
               Authorization: `Bearer ${token}`,
             },
