@@ -12,7 +12,8 @@
     "@h5web/app": "^12.0.1",
     "next": "14.2.5",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "@mui/material": "6.1.3"
   },
   "devDependencies": {
     "@types/node": "^20",

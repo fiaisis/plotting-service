@@ -3,6 +3,7 @@ import "@h5web/app/dist/styles.css";
 import { App, H5GroveProvider } from "@h5web/app";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
+import { Box, CircularProgress } from '@mui/material';
 
 const Fallback = () => (
   <div
@@ -37,13 +38,8 @@ export default function NexusViewer(props: {
   const [hostName, setHostName] = useState<string>("");
   const [protocol, setProtocol] = useState<string>("http");
   const [filepath, setFilePath] = useState<string>("");
-  const [token, setToken] = useState<string>("");
-  useEffect(() => {
-    setHostName(window.location.hostname);
-    setProtocol(window.location.protocol);
-    setToken(localStorage.getItem("scigateway:token") ?? "");
-  }, []);
-    const groveApiUrl =
+  const [loading, setLoading] = useState<boolean>(true);
+  const groveApiUrl =
     props.apiUrl === "http://localhost:8000"
       ? props.apiUrl
       : `${protocol}//${hostName}/plottingapi`;
@@ -51,6 +47,9 @@ export default function NexusViewer(props: {
   const fileQueryParams = `filename=${props.filename}`;
 
   useEffect(() => {
+    setLoading(true);
+    setHostName(window.location.hostname);
+    setProtocol(window.location.protocol);
     const headers: { [key: string]: string } = {'Content-Type': 'application/json'};
     if (token != "") {
       headers['Authorization'] = `Bearer ${token}`;
@@ -69,21 +68,27 @@ export default function NexusViewer(props: {
   }, [])
   return (
     <ErrorBoundary FallbackComponent={Fallback}>
-      <H5GroveProvider
-        url={groveApiUrl}
-        filepath={filepath}
-        axiosConfig={useMemo(
-          () => ({
-            params: { file: filepath },
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-          [filepath],
+        { loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <H5GroveProvider
+          url={groveApiUrl}
+          filepath={filepath.split("%20").join(" ")}
+          axiosConfig={useMemo(
+            () => ({
+              params: { file: filepath.split("%20").join(" ").replace(/"/g, "") },
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }),
+            [filepath],
+          )}
+          >
+            <App propagateErrors />
+          </H5GroveProvider>
         )}
-      >
-        <App propagateErrors />
-      </H5GroveProvider>
     </ErrorBoundary>
   );
 }
