@@ -33,7 +33,7 @@ const TokenRefresh = () => {
       clearInterval(intervalId);
       clearTimeout(timeoutId);
     };
-  }, []);
+  });
 
   return <></>;
 };

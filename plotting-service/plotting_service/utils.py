@@ -56,7 +56,7 @@ def find_experiment_number(request: Request) -> int:
                 f"The requested path {request.url.path} does not include an experiment number. "
                 f"Permissions cannot be checked"
             )
-            raise HTTPException(400, "Request missing experiment number") from None
+            raise HTTPException(HTTPStatus.BAD_REQUEST, "Request missing experiment number") from None
     else:
         match = re.search(r"%2FRB(\d+)%2F", request.url.query)
         if match is not None:
@@ -68,4 +68,4 @@ def find_experiment_number(request: Request) -> int:
             f"The requested nexus metadata path {request.url.path} does not include an experiment number. "
             f"Permissions cannot be checked"
         )
-        raise HTTPException(400, "Request missing experiment number")
+        raise HTTPException(HTTPStatus.BAD_REQUEST, "Request missing experiment number")
