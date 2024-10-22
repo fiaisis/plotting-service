@@ -4,11 +4,11 @@ readme = "README.md"
 version = "0.0.1"
 requires-python = ">= 3.11"
 dependencies = [
-    "fastapi[all]==0.111.1",
-    "pydantic==2.8.2",
-    "uvicorn==0.30.3",
-    "h5grove[fastapi]==2.2.0",
-    "PyJWT==2.8.0",
+    "fastapi[all]==0.115.3",
+    "pydantic==2.9.2",
+    "uvicorn==0.32.0",
+    "h5grove[fastapi]==2.3.0",
+    "PyJWT==2.9.0",
     "requests==2.32.3"
 ]
 
@@ -17,15 +17,15 @@ dependencies = [
 
 [project.optional-dependencies]
 formatting = [
-    "ruff==0.5.4",
-    "mypy==1.11.0",
+    "ruff==0.7.0",
+    "mypy==1.12.1",
     "plotting-service[test]",
-    "types-requests==2.32.0.20240712",
+    "types-requests==2.32.0.20241016",
     "types-urllib3==1.26.25.14",
 ]
 
 test = [
-    "pytest==8.3.1",
+    "pytest==8.3.3",
     "pytest-cov==5.0.0",
     "pytest-random-order==1.1.1",
 ]
