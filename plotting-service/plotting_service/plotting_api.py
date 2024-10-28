@@ -33,6 +33,10 @@ CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = bool(os.environ.get("DEV_MODE", False))
+if DEV_MODE:
+    logger.info("Development only mode")
+else:
+    logger.info("Production ready mode")
 
 
 app = FastAPI()
@@ -119,14 +123,14 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
 
     auth_header = request.headers.get("Authorization")
     if auth_header is None:
-        raise HTTPException(401, "Unauthenticated")
+        raise HTTPException(HTTPStatus.UNAUTHORIZED, "Unauthenticated")
 
     token = auth_header.split(" ")[1]
 
     try:
         user = get_user_from_token(token)
     except AuthError:
-        raise HTTPException(403, detail="Forbidden") from None
+        raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden") from None
     logger.info("Checking role of user")
     if user.role == "staff":
         return await call_next(request)
@@ -136,7 +140,7 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     if experiment_number in allowed_experiments:
         return await call_next(request)
 
-    raise HTTPException(403, detail="Forbidden")
+    raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden")
 
 
 app.include_router(router)
