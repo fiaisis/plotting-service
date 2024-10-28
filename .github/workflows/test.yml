@@ -35,29 +35,3 @@ jobs:
         run: |
           cd plotting-service
           pytest test --random-order --random-order-bucket=global --cov --cov-report=xml
-
-#      - name: Start backend
-#        env:
-#          CEPH_DIR: /home/runner/work/plotting-service/plotting-service/plotting-service/test/test_ceph
-#          DEV_MODE: True
-#        run: uvicorn plotting_service.plotting_api:app &
-#
-#      # We do this as the current config has production specific values (e.g. proxy and build output type)
-#      # and we want defaults for testing.
-#      - name: Remove production config
-#        run: rm data-viewer/next.config.mjs
-#      - name: cypress-run
-#        uses: cypress-io/github-action@v6
-#        with:
-#          build: yarn build
-#          start: yarn start
-#          working-directory: data-viewer
-#          headed: true
-#          browser: firefox
-#
-#      - name: Upload screenshots
-#        uses: actions/upload-artifact@v4
-#        if: failure()
-#        with:
-#          name: cypress-snapshots
-#          path: data-viewer/cypress/screenshots
