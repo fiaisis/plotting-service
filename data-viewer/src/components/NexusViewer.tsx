@@ -50,7 +50,6 @@ export default function NexusViewer(props: {
     const fileQueryUrl = `${props.apiUrl}/find_file/instrument/${props.instrument}/experiment_number/${props.experimentNumber}`
     const fileQueryParams = `filename=${props.filename}`;
     const headers: { [key: string]: string } = {'Content-Type': 'application/json'};
-    console.log("Token set as: " + loadedToken)
     if (loadedToken != "") {
       headers['Authorization'] = `Bearer ${loadedToken}`;
     }
