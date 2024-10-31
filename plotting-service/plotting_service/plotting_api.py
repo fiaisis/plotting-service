@@ -17,7 +17,13 @@ from starlette.responses import PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
-from plotting_service.utils import find_experiment_number, find_file
+from plotting_service.utils import (
+    find_experiment_number,
+    find_file_experiment_number,
+    find_file_instrument,
+    find_file_user_number,
+    request_path_check,
+)
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
@@ -61,7 +67,7 @@ async def get() -> typing.Literal["ok"]:
 
 @app.get("/text/instrument/{instrument}/experiment_number/{experiment_number}", response_class=PlainTextResponse)
 async def get_text_file(instrument: str, experiment_number: int, filename: str) -> str:
-    # we don't check experiment number as it is an int and pydantic wont process any non int type and return a 422
+    # We don't check experiment number as it is an int and pydantic won't process any non int type and return a 422
     # automatically
     if (
         ".." in instrument
@@ -75,7 +81,7 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
     ):
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
 
-    path = find_file(CEPH_DIR, instrument, experiment_number, filename)
+    path = find_file_instrument(CEPH_DIR, instrument, experiment_number, filename)
     if path is None:
         logger.error("Could not find the file requested.")
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
@@ -85,7 +91,7 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
 
 
 @app.get("/find_file/instrument/{instrument}/experiment_number/{experiment_number}")
-async def find_file_get(instrument: str, experiment_number: int, filename: str) -> str:
+async def find_file_get_instrument(instrument: str, experiment_number: int, filename: str) -> str:
     """
     Return the relative path to the env var CEPH_DIR that leads to the requested file if one exists.
     :param instrument: Instrument the file belongs to.
@@ -93,14 +99,39 @@ async def find_file_get(instrument: str, experiment_number: int, filename: str) 
     :param filename: Filename to find.
     :return: The relative path to the file in the CEPH_DIR env var.
     """
-    path = find_file(CEPH_DIR, instrument, experiment_number, filename)
+    path = find_file_instrument(ceph_dir=CEPH_DIR, instrument=instrument, experiment_number=experiment_number,
+                                filename=filename)
     if path is None:
-        logger.error("Could not find the file requested.")
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
-    # Remove CEPH_DIR
-    if path.is_relative_to(CEPH_DIR):
-        path = path.relative_to(CEPH_DIR)
-    return str(path)
+    return str(request_path_check(path=path, base_dir=CEPH_DIR))
+
+
+@app.get("/find_file/generic/experiment_number/{experiment_number}")
+async def find_file_generic_experiment_number(experiment_number: int, filename: str) -> str:
+    """
+    Return the relative path to the env var CEPH_DIR that leads to the requested file if one exists.
+    :param experiment_number: Experiment number the file belongs to.
+    :param filename: Filename to find
+    :return: The relative path to the file in the CEPH_DIR env var.
+    """
+    path = find_file_experiment_number(ceph_dir=CEPH_DIR, experiment_number=experiment_number, filename=filename)
+    if path is None:
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
+    return str(request_path_check(path=path, base_dir=CEPH_DIR))
+
+
+@app.get("/find_file/generic/user_number/{user_number}")
+async def find_file_generic_user_number(user_number: int, filename: str) -> str:
+    """
+    Return the relative path to the env var CEPH_DIR that leads to the requested file if one exists.
+    :param user_number: Experiment number the file belongs to.
+    :param filename: Filename to find
+    :return: The relative path to the file in the CEPH_DIR env var.
+    """
+    path = find_file_user_number(ceph_dir=CEPH_DIR, user_number=user_number, filename=filename)
+    if path is None:
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
+    return str(request_path_check(path, base_dir=CEPH_DIR))
 
 
 @app.middleware("http")
@@ -119,7 +150,6 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         return await call_next(request)
 
     logger.info(f"Checking permissions for {request.url.path}")
-    experiment_number = find_experiment_number(request)
 
     auth_header = request.headers.get("Authorization")
     if auth_header is None:
@@ -133,7 +163,19 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden") from None
     logger.info("Checking role of user")
     if user.role == "staff":
+        # Bypass permission check
         return await call_next(request)
+
+    # Handle case without experiment number
+    if request.url.path.startswith("/find_file/generic/user_number/"):
+        # Does not have an experiment number! Extract user number and check based on that.
+        user_number = request.path_params["user_number"]
+        if user_number == user.user_number:
+            return await call_next(request)
+        raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden")
+
+    # Otherwise handle with experiment number
+    experiment_number = find_experiment_number(request)
 
     logger.info("Checking experiments for user")
     allowed_experiments = get_experiments_for_user(user)
