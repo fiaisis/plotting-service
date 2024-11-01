@@ -4,35 +4,36 @@ import {App, H5GroveProvider} from "@h5web/app";
 import {useEffect, useState} from "react";
 import {ErrorBoundary} from "react-error-boundary";
 import {CircularProgress, Stack} from '@mui/material';
-import {FileQueryUrl} from "@/components/FileQueryUrl";
+import {FileQueryUrl} from "@/components/utils/FileQueryUrl";
 import {Fallback} from "@/components/utils/FallbackPage";
 
-export default function NexusViewer(
-    filename: string,
-    apiUrl: string,
-    instrument?: string,
-    experimentNumber?: string,
-    userNumber?: string,
+export default function NexusViewer(props :{
+    filename: string;
+    apiUrl: string;
+    instrument?: string;
+    experimentNumber?: string;
+    userNumber?: string;
+}
 ) {
     // We need to turn the env var into a full url as the h5provider can not take just the route.
     // Typically, we expect API_URL env var to be /plottingapi in staging and production
     const [filepath, setFilePath] = useState<string>("");
     const [token, setToken] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(true);
-    const [groveApiUrl, setApiUrl] = useState<string>(apiUrl)
+    const [groveApiUrl, setApiUrl] = useState<string>(props.apiUrl)
 
     useEffect(() => {
         setLoading(true)
         const loadedToken = localStorage.getItem("scigateway:token") ?? ""
         setToken(loadedToken);
-        setApiUrl(apiUrl.includes("localhost") ? apiUrl : `${window.location.protocol}//${window.location.hostname}/plottingapi`)
+        setApiUrl(props.apiUrl.includes("localhost") ? props.apiUrl : `${window.location.protocol}//${window.location.hostname}/plottingapi`)
 
-        const fileQueryUrl = FileQueryUrl(apiUrl, instrument, experimentNumber, userNumber);
+        const fileQueryUrl = FileQueryUrl(props.apiUrl, props.instrument, props.experimentNumber, props.userNumber);
         if (fileQueryUrl == null) {
             throw new Error("")
         }
 
-        const fileQueryParams = `filename=${filename}`;
+        const fileQueryParams = `filename=${props.filename}`;
         const headers: { [key: string]: string } = {'Content-Type': 'application/json'};
         if (loadedToken != "") {
             headers['Authorization'] = `Bearer ${loadedToken}`;
@@ -50,7 +51,7 @@ export default function NexusViewer(
                 setFilePath(filepath_to_use);
                 setLoading(false)
             })
-    }, [apiUrl, instrument, experimentNumber, userNumber, filename])
+    }, [props.apiUrl, props.instrument, props.experimentNumber, props.userNumber, props.filename])
 
     return (
         <ErrorBoundary FallbackComponent={Fallback}>

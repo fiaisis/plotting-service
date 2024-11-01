@@ -1,12 +1,12 @@
 import NexusViewer from "@/components/NexusViewer";
-import "../../../../globals.css";
+import "../../../../../globals.css";
 import TextViewer from "@/components/TextViewer";
 
-  export default function GenericUserDataPage({
-                                     params,
-                                   }: {
+export default function GenericUserDataPage({
+                                                params,
+                                            }: {
     params: { userNumber: string; filename: string };
-  }) {
+}) {
     // We expect a route of /generic/experiment_number/filename
     // This will result in a slug list of [experiment_number, filename]
     const {userNumber, filename} = params;
@@ -15,19 +15,19 @@ import TextViewer from "@/components/TextViewer";
 
     return (
         <main className="h5-container">
-          {fileExtension === "txt" ? (
-              <TextViewer
-                  apiUrl={apiUrl}
-                  userNumber={userNumber}
-                  filename={filename}
-              />
-          ) : (
-              <NexusViewer
-                  apiUrl={apiUrl}
-                  userNumber={userNumber}
-                  filename={filename}
-              />
-          )}
+            {fileExtension === "txt" ? (
+                <TextViewer
+                    apiUrl={apiUrl}
+                    userNumber={userNumber}
+                    filename={filename}
+                />
+            ) : (
+                <NexusViewer
+                    apiUrl={apiUrl}
+                    userNumber={userNumber}
+                    filename={filename}
+                />
+            )}
         </main>
     );
-  };
+};
