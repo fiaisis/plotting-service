@@ -19,7 +19,7 @@ def safe_check_filepath(filepath: Path, base_path: str) -> None:
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Invalid path being accessed.")
 
 
-def safe_find_file_in_dir(dir_path: Path, base_path: str, filename: str) -> Path | None:
+def _safe_find_file_in_dir(dir_path: Path, base_path: str, filename: str) -> Path | None:
     """
     Check that the directory path is safe and then search for filename in that directory and sub directories
     :param dir_path: Path to check is safe and search in side of
@@ -62,7 +62,7 @@ def find_file_instrument(ceph_dir: str, instrument: str, experiment_number: int,
 
     # Attempt to find file in autoreduced folder
     autoreduced_folder = Path(ceph_dir) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced"
-    return safe_find_file_in_dir(dir_path=autoreduced_folder, base_path=ceph_dir, filename=filename)
+    return _safe_find_file_in_dir(dir_path=autoreduced_folder, base_path=ceph_dir, filename=filename)
 
 
 def find_file_experiment_number(ceph_dir: str, experiment_number: int, filename: str) -> Path | None:
@@ -74,7 +74,7 @@ def find_file_experiment_number(ceph_dir: str, experiment_number: int, filename:
     :return: Full path to the filename or None
     """
     dir_path = Path(ceph_dir) / f"GENERIC/autoreduce/ExperimentNumbers/{experiment_number}/"
-    return safe_find_file_in_dir(dir_path=dir_path, base_path=ceph_dir, filename=filename)
+    return _safe_find_file_in_dir(dir_path=dir_path, base_path=ceph_dir, filename=filename)
 
 
 def find_file_user_number(ceph_dir: str, user_number: int, filename: str) -> Path | None:
@@ -86,7 +86,7 @@ def find_file_user_number(ceph_dir: str, user_number: int, filename: str) -> Pat
     :return: Full path to the filename or None
     """
     dir_path = Path(ceph_dir) / f"GENERIC/autoreduce/UserNumbers/{user_number}/"
-    return safe_find_file_in_dir(dir_path=dir_path, base_path=ceph_dir, filename=filename)
+    return _safe_find_file_in_dir(dir_path=dir_path, base_path=ceph_dir, filename=filename)
 
 
 def find_experiment_number(request: Request) -> int:
