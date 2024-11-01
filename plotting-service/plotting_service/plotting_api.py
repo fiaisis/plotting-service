@@ -99,8 +99,9 @@ async def find_file_get_instrument(instrument: str, experiment_number: int, file
     :param filename: Filename to find.
     :return: The relative path to the file in the CEPH_DIR env var.
     """
-    path = find_file_instrument(ceph_dir=CEPH_DIR, instrument=instrument, experiment_number=experiment_number,
-                                filename=filename)
+    path = find_file_instrument(
+        ceph_dir=CEPH_DIR, instrument=instrument, experiment_number=experiment_number, filename=filename
+    )
     if path is None:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
     return str(request_path_check(path=path, base_dir=CEPH_DIR))

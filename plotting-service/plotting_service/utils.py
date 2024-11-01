@@ -65,7 +65,7 @@ def find_file_instrument(ceph_dir: str, instrument: str, experiment_number: int,
     return safe_find_file_in_dir(dir_path=autoreduced_folder, base_path=ceph_dir, filename=filename)
 
 
-def find_file_experiment_number(ceph_dir:str, experiment_number: int, filename: str) -> Path | None:
+def find_file_experiment_number(ceph_dir: str, experiment_number: int, filename: str) -> Path | None:
     """
     Find the file for the given user_number
     :param ceph_dir: base path of the path
@@ -104,6 +104,7 @@ def find_experiment_number(request: Request) -> int:
             return int(url_parts[experiment_number_index + 1])
         except (ValueError, IndexError):
             from plotting_service.plotting_api import logger
+
             logger.warning(
                 f"The requested path {request.url.path} does not include an experiment number. "
                 f"Permissions cannot be checked"
@@ -131,6 +132,7 @@ def request_path_check(path: Path, base_dir: str) -> Path:
     """
     if path is None:
         from plotting_service.plotting_api import logger
+
         logger.error("Could not find the file requested.")
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
     # Remove CEPH_DIR
