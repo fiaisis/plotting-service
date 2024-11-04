@@ -7,8 +7,8 @@ export default function GenericUserDataPage({
                                             }: {
     params: { userNumber: string; filename: string };
 }) {
-    // We expect a route of /generic/experiment_number/filename
-    // This will result in a slug list of [experiment_number, filename]
+    // We expect a route of /generic/user_number/filename
+    // This will result in a slug list of [user_number, filename]
     const {userNumber, filename} = params;
     const fileExtension = filename.split(".").pop();
     const apiUrl = process.env.API_URL ?? "http://localhost:8000";
