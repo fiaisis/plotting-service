@@ -30,7 +30,7 @@ export default function NexusViewer(props :{
 
         const fileQueryUrl = FileQueryUrl(props.apiUrl, props.instrument, props.experimentNumber, props.userNumber);
         if (fileQueryUrl == null) {
-            throw new Error("")
+            throw new Error("The API file query URL was not rendered correctly and returned null")
         }
 
         const fileQueryParams = `filename=${props.filename}`;
