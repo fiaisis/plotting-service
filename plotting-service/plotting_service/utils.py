@@ -1,4 +1,3 @@
-import re
 from contextlib import suppress
 from http import HTTPStatus
 from pathlib import Path
@@ -62,4 +61,3 @@ def find_file_instrument(ceph_dir: str, instrument: str, experiment_number: int,
     # Attempt to find file in autoreduced folder
     autoreduced_folder = Path(ceph_dir) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced"
     return _safe_find_file_in_dir(dir_path=autoreduced_folder, base_path=ceph_dir, filename=filename)
-
