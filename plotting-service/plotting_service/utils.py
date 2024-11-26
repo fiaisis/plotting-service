@@ -1,4 +1,3 @@
-from contextlib import suppress
 from http import HTTPStatus
 from pathlib import Path
 

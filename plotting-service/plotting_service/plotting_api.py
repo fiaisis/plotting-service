@@ -10,7 +10,6 @@ from http import HTTPStatus
 from pathlib import Path
 
 import requests
-
 from fastapi import FastAPI, HTTPException
 from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
@@ -80,13 +79,13 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
         or "~" in filename
     ):
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
-    
+
     path = requests.get(
         f"{FIA_API_URL}/find_file/instrument/{instrument}/experiment_number/{experiment_number}?filename={filename}",
         headers={"Authorization": f"Bearer {FIA_AUTH_API_KEY}"},
         timeout=30,
     )
-    
+
     if path is None:
         logger.error("Could not find the file requested.")
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
