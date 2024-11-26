@@ -9,6 +9,8 @@ import typing
 from http import HTTPStatus
 from pathlib import Path
 
+import requests
+
 from fastapi import FastAPI, HTTPException
 from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
@@ -19,7 +21,6 @@ from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
 from plotting_service.utils import (
     find_experiment_number,
-    find_file_instrument,
 )
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
@@ -33,6 +34,8 @@ logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
+FIA_API_URL = os.environ.get("FIA_AUTH_URL")
+FIA_AUTH_API_KEY = os.environ.get("FIA_AUTH_API_KEY")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = bool(os.environ.get("DEV_MODE", False))
@@ -77,8 +80,13 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
         or "~" in filename
     ):
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
-
-    path = find_file_instrument(CEPH_DIR, instrument, experiment_number, filename)
+    
+    path = requests.get(
+        f"{FIA_API_URL}/find_file/instrument/{instrument}/experiment_number/{experiment_number}?filename={filename}",
+        headers={"Authorization": f"Bearer {FIA_AUTH_API_KEY}"},
+        timeout=30,
+    )
+    
     if path is None:
         logger.error("Could not find the file requested.")
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
