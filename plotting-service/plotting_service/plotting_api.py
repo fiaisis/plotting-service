@@ -80,11 +80,11 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
     ):
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
 
-    path = requests.get(
+    path = Path(requests.get(
         f"{FIA_API_URL}/find_file/instrument/{instrument}/experiment_number/{experiment_number}?filename={filename}",
         headers={"Authorization": f"Bearer {FIA_AUTH_API_KEY}"},
         timeout=30,
-    )
+    ).text)
 
     if path is None:
         logger.error("Could not find the file requested.")

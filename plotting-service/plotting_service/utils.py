@@ -1,7 +1,11 @@
+import re
 from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import HTTPException
+from starlette.requests import Request
+
+from plotting_service.plotting_api import logger
 
 
 def safe_check_filepath(filepath: Path, base_path: str) -> None:
@@ -16,23 +20,31 @@ def safe_check_filepath(filepath: Path, base_path: str) -> None:
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Invalid path being accessed.")
 
 
-def _safe_find_file_in_dir(dir_path: Path, base_path: str, filename: str) -> Path | None:
+def find_experiment_number(request: Request) -> int:
     """
-    Check that the directory path is safe and then search for filename in that directory and sub directories
-    :param dir_path: Path to check is safe and search in side of
-    :param base_path: the base directory of the path often just the /ceph dir on runners
-    :param filename: filename to find
-    :return: Path to the file or None
+    Find the experiment number from a request
+    :param request: Request to be used to get the experiment number
+    :return: Experiment number in the request
     """
-    # Do a check as we are handling user entered data here
-    try:
-        safe_check_filepath(filepath=dir_path, base_path=base_path)
-    except OSError:
-        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Invalid path being accessed.") from None
+    if request.url.path.startswith("/text"):
+        return int(request.url.path.split("/")[-1])
+    if request.url.path.startswith("/find_file"):
+        url_parts = request.url.path.split("/")
+        try:
+            experiment_number_index = url_parts.index("experiment_number")
+            return int(url_parts[experiment_number_index + 1])
+        except (ValueError, IndexError):
+            logger.warning(
+                f"The requested path {request.url.path} does not include an experiment number. "
+                f"Permissions cannot be checked"
+            )
+            raise HTTPException(HTTPStatus.BAD_REQUEST, "Request missing experiment number") from None
+    match = re.search(r"%2FRB(\d+)%2F", request.url.query)
+    if match is not None:
+        return int(match.group(1))
 
-    if dir_path.exists():
-        found_paths = list(dir_path.rglob(filename))
-        if len(found_paths) > 0 and found_paths[0].exists():
-            return found_paths[0]
-
-    return None
+    logger.warning(
+        f"The requested nexus metadata path {request.url.path} does not include an experiment number. "
+        f"Permissions cannot be checked"
+    )
+    raise HTTPException(HTTPStatus.BAD_REQUEST, "Request missing experiment number")
