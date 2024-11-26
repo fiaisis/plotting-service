@@ -5,8 +5,6 @@ from pathlib import Path
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from plotting_service.plotting_api import logger
-
 
 def safe_check_filepath(filepath: Path, base_path: str) -> None:
     """
@@ -34,6 +32,7 @@ def find_experiment_number(request: Request) -> int:
             experiment_number_index = url_parts.index("experiment_number")
             return int(url_parts[experiment_number_index + 1])
         except (ValueError, IndexError):
+            from plotting_service.plotting_api import logger
             logger.warning(
                 f"The requested path {request.url.path} does not include an experiment number. "
                 f"Permissions cannot be checked"
@@ -42,7 +41,8 @@ def find_experiment_number(request: Request) -> int:
     match = re.search(r"%2FRB(\d+)%2F", request.url.query)
     if match is not None:
         return int(match.group(1))
-
+    # Avoiding circular import
+    from plotting_service.plotting_api import logger
     logger.warning(
         f"The requested nexus metadata path {request.url.path} does not include an experiment number. "
         f"Permissions cannot be checked"
