@@ -33,6 +33,7 @@ def find_experiment_number(request: Request) -> int:
             return int(url_parts[experiment_number_index + 1])
         except (ValueError, IndexError):
             from plotting_service.plotting_api import logger
+
             logger.warning(
                 f"The requested path {request.url.path} does not include an experiment number. "
                 f"Permissions cannot be checked"
@@ -43,6 +44,7 @@ def find_experiment_number(request: Request) -> int:
         return int(match.group(1))
     # Avoiding circular import
     from plotting_service.plotting_api import logger
+
     logger.warning(
         f"The requested nexus metadata path {request.url.path} does not include an experiment number. "
         f"Permissions cannot be checked"
