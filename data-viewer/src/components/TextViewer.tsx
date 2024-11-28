@@ -9,6 +9,7 @@ import {Fallback} from "@/components/utils/FallbackPage";
 export default function TextViewer(props: {
     filename: string;
     apiUrl: string;
+    fiaApiUrl: string;
     instrument?: string;
     experimentNumber?: string;
     userNumber?: string;
@@ -21,7 +22,7 @@ export default function TextViewer(props: {
     useEffect(() => {
         setLoading(true)
         const loadedToken = localStorage.getItem("scigateway:token") ?? ""
-        const fileQueryUrl = FileQueryUrl(props.apiUrl, props.instrument, props.experimentNumber, props.userNumber);
+        const fileQueryUrl = FileQueryUrl(props.fiaApiUrl, props.instrument, props.experimentNumber, props.userNumber);
         if (fileQueryUrl == null) {
             throw new Error("The API file query URL was not rendered correctly and returned null")
         }
