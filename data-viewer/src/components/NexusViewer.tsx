@@ -10,6 +10,7 @@ import {Fallback} from "@/components/utils/FallbackPage";
 export default function NexusViewer(props :{
     filename: string;
     apiUrl: string;
+    fiaApiUrl: string
     instrument?: string;
     experimentNumber?: string;
     userNumber?: string;
@@ -28,7 +29,7 @@ export default function NexusViewer(props :{
         setToken(loadedToken);
         setApiUrl(props.apiUrl.includes("localhost") ? props.apiUrl : `${window.location.protocol}//${window.location.hostname}/plottingapi`)
 
-        const fileQueryUrl = FileQueryUrl(props.apiUrl, props.instrument, props.experimentNumber, props.userNumber);
+        const fileQueryUrl = FileQueryUrl(props.fiaApiUrl, props.instrument, props.experimentNumber, props.userNumber);
         if (fileQueryUrl == null) {
             throw new Error("The API file query URL was not rendered correctly and returned null")
         }

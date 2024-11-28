@@ -12,12 +12,14 @@ export default function DataPage({
     const {instrument, experimentNumber, filename} = params;
     const fileExtension = filename.split(".").pop();
     const apiUrl = process.env.API_URL ?? "http://localhost:8000";
+    const fiaApiUrl = process.env.FIA_API_URL ?? "http://localhost:8001";
 
     return (
         <main className="h5-container">
             {fileExtension === "txt" ? (
                 <TextViewer
                     apiUrl={apiUrl}
+                    fiaApiUrl={fiaApiUrl}
                     experimentNumber={experimentNumber}
                     instrument={instrument}
                     filename={filename}
@@ -25,6 +27,7 @@ export default function DataPage({
             ) : (
                 <NexusViewer
                     apiUrl={apiUrl}
+                    fiaApiUrl={fiaApiUrl}
                     experimentNumber={experimentNumber}
                     instrument={instrument}
                     filename={filename}

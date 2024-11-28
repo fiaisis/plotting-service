@@ -33,8 +33,8 @@ logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
-FIA_API_URL = os.environ.get("FIA_AUTH_URL")
-FIA_AUTH_API_KEY = os.environ.get("FIA_AUTH_API_KEY")
+FIA_API_URL = os.environ.get("FIA_API_URL")
+FIA_API_API_KEY = os.environ.get("FIA_API_API_KEY")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = bool(os.environ.get("DEV_MODE", False))
@@ -83,7 +83,7 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
     path = Path(
         requests.get(
             f"{FIA_API_URL}/find_file/instrument/{instrument}/experiment_number/{experiment_number}?filename={filename}",
-            headers={"Authorization": f"Bearer {FIA_AUTH_API_KEY}"},
+            headers={"Authorization": f"Bearer {FIA_API_API_KEY}"},
             timeout=30,
         ).text
     )
