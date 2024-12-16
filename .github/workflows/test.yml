@@ -57,6 +57,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install --no-cache-dir .
 
+      - name: Run FIA-API
+        run: |
+          cd FIA-API
+          uvicorn fia_api.fia_api:app --host 0.0.0.0 --port 8001 &
+
       # We do this as the current config has production specific values (e.g. proxy and build output type)
       # and we want defaults for testing.
       - name: Remove production config
