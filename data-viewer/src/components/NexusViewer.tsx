@@ -52,7 +52,7 @@ export default function NexusViewer(props :{
                 setFilePath(filepath_to_use);
                 setLoading(false)
             })
-    }, [props.apiUrl, props.instrument, props.experimentNumber, props.userNumber, props.filename])
+    }, [props.apiUrl, props.instrument, props.experimentNumber, props.userNumber, props.filename, props.fiaApiUrl])
 
     return (
         <ErrorBoundary FallbackComponent={Fallback}>
