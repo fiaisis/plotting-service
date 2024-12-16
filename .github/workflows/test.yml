@@ -56,6 +56,10 @@ jobs:
           sudo apt-get -y install libpq-dev gcc
           python -m pip install --upgrade pip
           python -m pip install --no-cache-dir .
+        # setting env vars before running FIA-API
+        env:
+          FIA_API_URL: "http://localhost:8001"
+          NEXT_PUBLIC_FIA_API_URL: "http://localhost:8001"
 
       - name: Run FIA-API
         run: |

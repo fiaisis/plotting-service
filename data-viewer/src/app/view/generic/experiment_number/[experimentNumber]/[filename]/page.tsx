@@ -12,7 +12,8 @@ export default function GenericExperimentDataPage({
     const {experimentNumber, filename} = params;
     const fileExtension = filename.split(".").pop();
     const apiUrl = process.env.API_URL ?? "http://localhost:8000";
-    const fiaApiUrl = process.env.FIA_API_URL ?? "http://localhost:8001";
+    // temporary check to force a value onto fiaApiUrl
+    const fiaApiUrl = (process.env.FIA_API_URL || process.env.NEXT_PUBLIC_FIA_API_URL) || "http://localhost:8001";
     
     return (
         <main className="h5-container">
