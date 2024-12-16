@@ -52,8 +52,8 @@ jobs:
       - name: Install FIA-API
         run: |
           cd FIA-API
-          apt-get update
-          apt-get -y install libpq-dev gcc
+          sudo apt-get update
+          sudo apt-get -y install libpq-dev gcc
           python -m pip install --upgrade pip
           python -m pip install --no-cache-dir .
 
