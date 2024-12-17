@@ -15,6 +15,13 @@ export default function DataPage({
     // temporary check to force a value onto fiaApiUrl
     const fiaApiUrl = (process.env.FIA_API_URL || process.env.NEXT_PUBLIC_FIA_API_URL) || "http://localhost:8001";
 
+    console.log("non generic env vars \n")
+    
+    console.log("\n fiaApiUrl: ", fiaApiUrl, "\n NEXT_PUBLIC_FIA_API_URL: ", process.env.NEXT_PUBLIC_FIA_API_URL, "\n normal FAPI_URL: ", process.env.FIA_API_URL)
+
+    console.log("Checking to see if any apiUrl is defined (before adding it to test worflow")
+    console.log("\n apiUrl: ", apiUrl, "\n NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL, "\n normal ", process.env.API_URL)
+
     return (
         <main className="h5-container">
             {fileExtension === "txt" ? (
