@@ -16,6 +16,7 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NEXT_PUBLIC_API_URL /plottingapi
+ENV NEXT_PUBLIC_FIA_API_URL /api
 
 RUN yarn run build
 
@@ -26,6 +27,7 @@ WORKDIR /app
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NEXT_PUBLIC_API_URL /plottingapi
+ENV NEXT_PUBLIC_FIA_API_URL /api
 
 
 RUN addgroup --system --gid 1001 nodejs

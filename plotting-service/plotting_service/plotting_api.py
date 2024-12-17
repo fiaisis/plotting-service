@@ -9,6 +9,7 @@ import typing
 from http import HTTPStatus
 from pathlib import Path
 
+import requests
 from fastapi import FastAPI, HTTPException
 from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
@@ -19,10 +20,6 @@ from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
 from plotting_service.utils import (
     find_experiment_number,
-    find_file_experiment_number,
-    find_file_instrument,
-    find_file_user_number,
-    request_path_check,
 )
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
@@ -36,6 +33,8 @@ logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
+FIA_API_URL = os.environ.get("FIA_API_URL")
+FIA_API_API_KEY = os.environ.get("FIA_API_API_KEY")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = bool(os.environ.get("DEV_MODE", False))
@@ -81,58 +80,20 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
     ):
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
 
-    path = find_file_instrument(CEPH_DIR, instrument, experiment_number, filename)
+    path = Path(
+        requests.get(
+            f"{FIA_API_URL}/find_file/instrument/{instrument}/experiment_number/{experiment_number}?filename={filename}",
+            headers={"Authorization": f"Bearer {FIA_API_API_KEY}"},
+            timeout=30,
+        ).text
+    )
+
     if path is None:
         logger.error("Could not find the file requested.")
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
 
     with path.open("r") as file:
         return file.read()
-
-
-@app.get("/find_file/instrument/{instrument}/experiment_number/{experiment_number}")
-async def find_file_get_instrument(instrument: str, experiment_number: int, filename: str) -> str:
-    """
-    Return the relative path to the env var CEPH_DIR that leads to the requested file if one exists.
-    :param instrument: Instrument the file belongs to.
-    :param experiment_number: Experiment number the file belongs to.
-    :param filename: Filename to find.
-    :return: The relative path to the file in the CEPH_DIR env var.
-    """
-    path = find_file_instrument(
-        ceph_dir=CEPH_DIR, instrument=instrument, experiment_number=experiment_number, filename=filename
-    )
-    if path is None:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
-    return str(request_path_check(path=path, base_dir=CEPH_DIR))
-
-
-@app.get("/find_file/generic/experiment_number/{experiment_number}")
-async def find_file_generic_experiment_number(experiment_number: int, filename: str) -> str:
-    """
-    Return the relative path to the env var CEPH_DIR that leads to the requested file if one exists.
-    :param experiment_number: Experiment number the file belongs to.
-    :param filename: Filename to find
-    :return: The relative path to the file in the CEPH_DIR env var.
-    """
-    path = find_file_experiment_number(ceph_dir=CEPH_DIR, experiment_number=experiment_number, filename=filename)
-    if path is None:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
-    return str(request_path_check(path=path, base_dir=CEPH_DIR))
-
-
-@app.get("/find_file/generic/user_number/{user_number}")
-async def find_file_generic_user_number(user_number: int, filename: str) -> str:
-    """
-    Return the relative path to the env var CEPH_DIR that leads to the requested file if one exists.
-    :param user_number: Experiment number the file belongs to.
-    :param filename: Filename to find
-    :return: The relative path to the file in the CEPH_DIR env var.
-    """
-    path = find_file_user_number(ceph_dir=CEPH_DIR, user_number=user_number, filename=filename)
-    if path is None:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
-    return str(request_path_check(path, base_dir=CEPH_DIR))
 
 
 @app.middleware("http")
