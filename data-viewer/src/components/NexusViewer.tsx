@@ -23,7 +23,32 @@ export default function NexusViewer(props :{
     const [loading, setLoading] = useState<boolean>(true);
     const [groveApiUrl, setApiUrl] = useState<string>(props.apiUrl)
 
-    console.log("out of useEffect Nexus viewer, starting FileQueryURL with: ", props.fiaApiUrl,"", props.instrument,"", props.experimentNumber,"", props.userNumber)
+    console.log("Duplicated to see what the values would have been within the useeffect, Nexus viewer, starting FileQueryURL with: ", props.fiaApiUrl, "", props.instrument, "", props.experimentNumber, "", props.userNumber)
+    const fileQueryUrl = FileQueryUrl(props.fiaApiUrl, props.instrument, props.experimentNumber, props.userNumber);
+
+    console.log("returned file query url ", fileQueryUrl)
+    const loadedToken = localStorage.getItem("scigateway:token") ?? ""
+    console.log("is this a loaded token", loadedToken, " the token")
+
+    const fileQueryParams = `filename=${props.filename}`;
+    const headers: { [key: string]: string } = {'Content-Type': 'application/json'};
+    if (loadedToken != "") {
+        headers['Authorization'] = `Bearer ${loadedToken}`;
+    }
+
+    fetch(`${fileQueryUrl}?${fileQueryParams}`, {method: 'GET', headers})
+    .then((res) => {
+        console.log("result of get ", res)
+        if (!res.ok) {
+            throw new Error(res.statusText);
+        }
+        return res.text();
+    })
+    .then((data) => {
+        const filepath_to_use = data.split("%20").join(" ").replace(/"/g, "")
+        setFilePath(filepath_to_use);
+        setLoading(false)
+    })
 
     useEffect(() => {
         setLoading(true)
@@ -31,13 +56,10 @@ export default function NexusViewer(props :{
         setToken(loadedToken);
         setApiUrl(props.apiUrl.includes("localhost") ? props.apiUrl : `${window.location.protocol}//${window.location.hostname}/plottingapi`)
 
-        console.log("Nexus viewer, starting FileQueryURL with: ", props.fiaApiUrl,"", props.instrument,"", props.experimentNumber,"", props.userNumber)
         const fileQueryUrl = FileQueryUrl(props.fiaApiUrl, props.instrument, props.experimentNumber, props.userNumber);
         if (fileQueryUrl == null) {
             throw new Error("The API file query URL was not rendered correctly and returned null")
         }
-        console.log("returned file query url ", fileQueryUrl)
-        console.log("is this a loaded token", loadedToken, " the token")
 
         const fileQueryParams = `filename=${props.filename}`;
         const headers: { [key: string]: string } = {'Content-Type': 'application/json'};
