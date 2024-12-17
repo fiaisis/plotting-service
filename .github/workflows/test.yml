@@ -35,13 +35,6 @@ jobs:
         run: |
           cd plotting-service
           pytest test --random-order --random-order-bucket=global --cov --cov-report=xml
-
-      - name: Start backend
-        env:
-          CEPH_DIR: /home/runner/work/plotting-service/plotting-service/plotting-service/test/test_ceph
-          DEV_MODE: True
-        run: uvicorn plotting_service.plotting_api:app &
-
       - name: Checkout FIA-API repo
         uses: actions/checkout@v4
         with:
@@ -56,7 +49,6 @@ jobs:
           sudo apt-get -y install libpq-dev gcc
           python -m pip install --upgrade pip
           python -m pip install --no-cache-dir .
-        # setting env vars before running FIA-API
         env:
           FIA_API_URL: "http://localhost:8001"
           NEXT_PUBLIC_FIA_API_URL: "http://localhost:8001"
@@ -65,6 +57,12 @@ jobs:
         run: |
           cd FIA-API
           uvicorn fia_api.fia_api:app --host 0.0.0.0 --port 8001 &
+
+      - name: Start backend
+        env:
+          DEV_MODE: True
+          CEPH_DIR: FIA-API/test/test-ceph
+        run: uvicorn plotting_service.plotting_api:app &
 
       # We do this as the current config has production specific values (e.g. proxy and build output type)
       # and we want defaults for testing.
