@@ -35,6 +35,14 @@ jobs:
         run: |
           cd plotting-service
           pytest test --random-order --random-order-bucket=global --cov --cov-report=xml
+      - name: Start backend
+        env:
+          CEPH_DIR: /home/runner/work/plotting-service/plotting-service/plotting-service/test/test_ceph
+          DEV_MODE: True
+          FIA_API_URL: http://localhost:8001
+          NEXT_PUBLIC_FIA_API_URL: http://localhost:8001
+        run: uvicorn plotting_service.plotting_api:app &
+
       - name: Checkout FIA-API repo
         uses: actions/checkout@v4
         with:
@@ -49,20 +57,14 @@ jobs:
           sudo apt-get -y install libpq-dev gcc
           python -m pip install --upgrade pip
           python -m pip install --no-cache-dir .
-<<<<<<< HEAD
         env:
           FIA_API_URL: "http://localhost:8001"
           NEXT_PUBLIC_FIA_API_URL: "http://localhost:8001"
-=======
->>>>>>> c4b25e0 (Move env var to fia-api step)
 
       - name: Run FIA-API
         run: |
           cd FIA-API
           uvicorn fia_api.fia_api:app --host 0.0.0.0 --port 8001 &
-        env:
-          FIA_API_URL: "http://localhost:8001"
-          NEXT_PUBLIC_FIA_API_URL: "http://localhost:8001"
 
       - name: Start backend
         env:
