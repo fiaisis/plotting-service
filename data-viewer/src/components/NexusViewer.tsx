@@ -23,6 +23,8 @@ export default function NexusViewer(props :{
     const [loading, setLoading] = useState<boolean>(true);
     const [groveApiUrl, setApiUrl] = useState<string>(props.apiUrl)
 
+    console.log("out of useEffect Nexus viewer, starting FileQueryURL with: ", props.fiaApiUrl,"", props.instrument,"", props.experimentNumber,"", props.userNumber)
+
     useEffect(() => {
         setLoading(true)
         const loadedToken = localStorage.getItem("scigateway:token") ?? ""
