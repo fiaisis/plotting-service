@@ -33,7 +33,7 @@ logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
 logger.info("CEPH DIR is originally: %s", os.environ.get("CEPH_DIR"))
-CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph") # UPDATE THIS!!!
+CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")  # UPDATE THIS!!!
 FIA_API_URL = os.environ.get("FIA_API_URL")
 FIA_API_API_KEY = os.environ.get("FIA_API_API_KEY")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
