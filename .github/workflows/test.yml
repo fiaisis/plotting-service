@@ -35,13 +35,6 @@ jobs:
         run: |
           cd plotting-service
           pytest test --random-order --random-order-bucket=global --cov --cov-report=xml
-      - name: Start backend
-        env:
-          CEPH_DIR: /home/runner/work/plotting-service/plotting-service/plotting-service/test/test_ceph
-          DEV_MODE: True
-          FIA_API_URL: http://localhost:8001
-          NEXT_PUBLIC_FIA_API_URL: http://localhost:8001
-        run: uvicorn plotting_service.plotting_api:app &
 
       - name: Checkout FIA-API repo
         uses: actions/checkout@v4
@@ -70,6 +63,8 @@ jobs:
         env:
           DEV_MODE: True
           CEPH_DIR: FIA-API/test/test-ceph
+          FIA_API_URL: http://localhost:8001
+          NEXT_PUBLIC_FIA_API_URL: http://localhost:80099
         run: uvicorn plotting_service.plotting_api:app &
 
       # We do this as the current config has production specific values (e.g. proxy and build output type)
