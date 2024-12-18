@@ -32,12 +32,12 @@ logger = logging.getLogger(__name__)
 logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
-logger.info("CEPH DIR is originally: ", os.environ.get("CEPH_DIR"))
+logger.info("CEPH DIR is originally: %s", os.environ.get("CEPH_DIR"))
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph") # UPDATE THIS!!!
 FIA_API_URL = os.environ.get("FIA_API_URL")
 FIA_API_API_KEY = os.environ.get("FIA_API_API_KEY")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
-logger.info("FIA_API_URL and KEY are: ", FIA_API_URL, " ", FIA_API_API_KEY)
+logger.info("FIA_API_URL and KEY are: %s and %s ", FIA_API_URL, FIA_API_API_KEY)
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = bool(os.environ.get("DEV_MODE", False))
 if DEV_MODE:
