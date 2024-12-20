@@ -50,9 +50,6 @@ jobs:
           sudo apt-get -y install libpq-dev gcc
           python -m pip install --upgrade pip
           python -m pip install --no-cache-dir .
-        env:
-          FIA_API_URL: "http://localhost:8001"
-          NEXT_PUBLIC_FIA_API_URL: "http://localhost:8001"
 
       - name: Run FIA-API
         run: |
@@ -64,7 +61,7 @@ jobs:
           DEV_MODE: True
           CEPH_DIR: FIA-API/test/test_ceph
           FIA_API_URL: http://localhost:8001
-          NEXT_PUBLIC_FIA_API_URL: http://localhost:80099
+          FIA_API_API_KEY: shh
         run: uvicorn plotting_service.plotting_api:app &
 
       # We do this as the current config has production specific values (e.g. proxy and build output type)
@@ -73,6 +70,11 @@ jobs:
         run: rm data-viewer/next.config.mjs
       - name: cypress-run
         uses: cypress-io/github-action@v6
+        env:
+          FIA_API_URL: "http://localhost:8001"
+          NEXT_PUBLIC_FIA_API_URL: "http://localhost:8001"
+          REACT_APP_FIA_API_URL: "http://localhost:8001"
+
         with:
           build: yarn build
           start: yarn start
