@@ -33,9 +33,9 @@ logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
 logger.info("CEPH DIR is originally: %s", os.environ.get("CEPH_DIR"))
-CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")  # UPDATE THIS!!!
-FIA_API_URL = os.environ.get("FIA_API_URL")
-FIA_API_API_KEY = os.environ.get("FIA_API_API_KEY")
+CEPH_DIR = os.environ.get("CEPH_DIR", "./FIA-API/test/test_ceph")
+FIA_API_URL = os.environ.get("FIA_API_URL", "http://localhost:8001")
+FIA_API_API_KEY = os.environ.get("FIA_API_API_KEY", "ssh")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 logger.info("FIA_API_URL and KEY are: %s and %s ", FIA_API_URL, FIA_API_API_KEY)
 settings.base_dir = Path(CEPH_DIR).resolve()

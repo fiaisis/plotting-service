@@ -19,7 +19,7 @@ export default function DataPage({
     
     console.log("\n fiaApiUrl: ", fiaApiUrl, "\n NEXT_PUBLIC_FIA_API_URL: ", process.env.NEXT_PUBLIC_FIA_API_URL, "\n normal FAPI_URL: ", process.env.FIA_API_URL)
 
-    console.warn("\n\n process.env.REACT_APP fiaApiUrl is ", process.env.REACT_APP_FIA_API_URL)
+    console.log("\n\n process.env.REACT_APP fiaApiUrl is ", process.env.REACT_APP_FIA_API_URL)
 
     console.log("Checking to see if any apiUrl is defined (before adding it to test worflow")
     console.log("\n apiUrl: ", apiUrl, "\n NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL, "\n normal ", process.env.API_URL)

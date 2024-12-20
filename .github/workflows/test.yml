@@ -59,7 +59,7 @@ jobs:
       - name: Start backend
         env:
           DEV_MODE: True
-          CEPH_DIR: FIA-API/test/test_ceph
+          CEPH_DIR: ./FIA-API/test/test_ceph
           FIA_API_URL: http://localhost:8001
           FIA_API_API_KEY: shh
         run: uvicorn plotting_service.plotting_api:app &
