@@ -33,8 +33,8 @@ logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
-FIA_API_URL = os.environ.get("FIA_API_URL")
-FIA_API_API_KEY = os.environ.get("FIA_API_API_KEY")
+FIA_API_URL = os.environ.get("FIA_API_URL", "http://localhost:8001")
+FIA_API_API_KEY = os.environ.get("FIA_API_API_KEY", "shh")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = bool(os.environ.get("DEV_MODE", False))
@@ -88,10 +88,15 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
         ).text
     )
 
+    # Returned path is relative to CEPH_DIR (prepending to generate absolute path)
+    # stripping extra quotes to prevent FileNotFound
+    path = Path(CEPH_DIR) / Path(str(path).strip('"'))
+
     if path is None:
         logger.error("Could not find the file requested.")
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
 
+# UnicodeDecodeError: 'utf-8' codec can't decode byte, invalid start byte
     with path.open("r") as file:
         return file.read()
 
