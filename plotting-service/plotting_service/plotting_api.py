@@ -33,7 +33,7 @@ logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
 logger.info("CEPH DIR is originally: %s", os.environ.get("CEPH_DIR"))
-CEPH_DIR = os.environ.get("CEPH_DIR", "./FIA-API/test/test_ceph")
+CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 FIA_API_URL = os.environ.get("FIA_API_URL", "http://localhost:8001")
 FIA_API_API_KEY = os.environ.get("FIA_API_API_KEY", "ssh")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
@@ -90,10 +90,13 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
         ).text
     )
 
+    # Returned path is relative to CEPH_DIR (prepending to generate absolute path)
+    # the returned comes with extra quotes that need stripping
+    path = Path(CEPH_DIR) / Path(str(path).strip('"'))
     if path is None:
         logger.error("Could not find the file requested.")
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
-
+    # UnicodeDecodeError: 'utf-8' codec can't decode byte, invalid start byte
     with path.open("r") as file:
         return file.read()
 
