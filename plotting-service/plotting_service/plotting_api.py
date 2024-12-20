@@ -96,7 +96,7 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
         logger.error("Could not find the file requested.")
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
 
-# UnicodeDecodeError: 'utf-8' codec can't decode byte, invalid start byte
+    # UnicodeDecodeError: 'utf-8' codec can't decode byte, invalid start byte
     with path.open("r") as file:
         return file.read()
 
