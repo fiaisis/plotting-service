@@ -21,29 +21,25 @@ export default function TextViewer(props: {
     useEffect(() => {
         setLoading(true)
         const loadedToken = localStorage.getItem("scigateway:token") ?? ""
-        const fileQueryUrl = FileQueryUrl(props.apiUrl, props.instrument, props.experimentNumber, props.userNumber);
-        if (fileQueryUrl == null) {
-            throw new Error("The API file query URL was not rendered correctly and returned null")
-        }
-
-        const fileQueryParams = `filename=${props.filename}`;
+        const textQueryUrl = `${props.apiUrl}/text/instrument/${props.instrument}/experiment_number/${props.experimentNumber}`;
+        const textQueryParams = `filename=${props.filename}`;
         const headers: { [key: string]: string } = {'Content-Type': 'application/json'};
         if (loadedToken != "") {
             headers['Authorization'] = `Bearer ${loadedToken}`;
         }
 
-        fetch(`${fileQueryUrl}?${fileQueryParams}`, {method: 'GET', headers})
+        fetch(`${textQueryUrl}?${textQueryParams}`, {method: 'GET', headers})
             .then((res) => {
                 if (!res.ok) {
                     throw new Error(res.statusText);
                 }
                 return res.text();
             })
-            .then((data) => {
-                const filepath_to_use = data.split("%20").join(" ").replace(/"/g, "")
-                setText(filepath_to_use);
+            .then((resultText) => {
+                setText(resultText)
                 setLoading(false)
             })
+            .catch((_) => setText("something went wrong"));
     }, [props.apiUrl, props.instrument, props.experimentNumber, props.userNumber, props.filename])
 
   return (
