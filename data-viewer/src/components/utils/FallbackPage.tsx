@@ -10,7 +10,7 @@ export const Fallback = () => (
             height: "100vh",
         }}
     >
-        <Image src={"/monkey.webp"} alt={"Monkey holding excellent website award"}/>
+        <Image src={"/monkey.webp"} alt={"Monkey holding excellent website award"} height={256} width={256} style={{ height:"50%", width:"30%" }}/>
         <h1>Something Went Wrong</h1>
         <p>
             Return <a href={"https://reduce.isis.cclrc.ac.uk"}>Home</a>
