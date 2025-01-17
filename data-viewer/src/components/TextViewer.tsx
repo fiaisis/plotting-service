@@ -5,6 +5,7 @@ import {ErrorBoundary} from "react-error-boundary";
 import {CircularProgress} from "@mui/material";
 import {Stack} from "@mui/system";
 import {Fallback} from "@/components/utils/FallbackPage";
+import {App} from "@h5web/app";
 
 export default function TextViewer(props: {
     filename: string;
@@ -38,9 +39,13 @@ export default function TextViewer(props: {
             .then((resultText) => {
                 setText(resultText)
                 setLoading(false)
+            }).finally(() => {
+                if (loading) {
+                    setLoading(false)
+                    throw new Error("Data could not be loaded");
+                }
             })
-            .catch((_) => setText("something went wrong"));
-    }, [props.apiUrl, props.instrument, props.experimentNumber, props.userNumber, props.filename])
+    }, [props.apiUrl, props.instrument, props.experimentNumber, props.filename])
 
   return (
       <ErrorBoundary FallbackComponent={Fallback}>
@@ -52,6 +57,7 @@ export default function TextViewer(props: {
           ) : (
               <div>
                   <pre>{text}</pre>
+                  <App propagateErrors/>
               </div>
           )}
       </ErrorBoundary>
