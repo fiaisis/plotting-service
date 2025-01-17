@@ -5,6 +5,7 @@ import {ErrorBoundary} from "react-error-boundary";
 import {CircularProgress} from "@mui/material";
 import {Stack} from "@mui/system";
 import {Fallback} from "@/components/utils/FallbackPage";
+import {App} from "@h5web/app";
 
 export default function TextViewer(props: {
     filename: string;
@@ -21,30 +22,30 @@ export default function TextViewer(props: {
     useEffect(() => {
         setLoading(true)
         const loadedToken = localStorage.getItem("scigateway:token") ?? ""
-        const fileQueryUrl = FileQueryUrl(props.apiUrl, props.instrument, props.experimentNumber, props.userNumber);
-        if (fileQueryUrl == null) {
-            throw new Error("The API file query URL was not rendered correctly and returned null")
-        }
-
-        const fileQueryParams = `filename=${props.filename}`;
+        const textQueryUrl = `${props.apiUrl}/text/instrument/${props.instrument}/experiment_number/${props.experimentNumber}`;
+        const textQueryParams = `filename=${props.filename}`;
         const headers: { [key: string]: string } = {'Content-Type': 'application/json'};
         if (loadedToken != "") {
             headers['Authorization'] = `Bearer ${loadedToken}`;
         }
 
-        fetch(`${fileQueryUrl}?${fileQueryParams}`, {method: 'GET', headers})
+        fetch(`${textQueryUrl}?${textQueryParams}`, {method: 'GET', headers})
             .then((res) => {
                 if (!res.ok) {
                     throw new Error(res.statusText);
                 }
                 return res.text();
             })
-            .then((data) => {
-                const filepath_to_use = data.split("%20").join(" ").replace(/"/g, "")
-                setText(filepath_to_use);
+            .then((resultText) => {
+                setText(resultText)
                 setLoading(false)
+            }).finally(() => {
+                if (loading) {
+                    setLoading(false)
+                    throw new Error("Data could not be loaded");
+                }
             })
-    }, [props.apiUrl, props.instrument, props.experimentNumber, props.userNumber, props.filename])
+    }, [props.apiUrl, props.instrument, props.experimentNumber, props.filename])
 
   return (
       <ErrorBoundary FallbackComponent={Fallback}>
@@ -56,6 +57,7 @@ export default function TextViewer(props: {
           ) : (
               <div>
                   <pre>{text}</pre>
+                  <App propagateErrors/>
               </div>
           )}
       </ErrorBoundary>
