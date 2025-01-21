@@ -52,12 +52,7 @@ export default function NexusViewer(props: {
     }
 
     fetch(`${fileQueryUrl}?${fileQueryParams}`, { method: "GET", headers })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(res.statusText);
-        }
-        return res.text();
-      })
+      .then((res) => res.text())
       .then((data) => {
         const filepath_to_use = data
           .split("%20")
@@ -66,8 +61,9 @@ export default function NexusViewer(props: {
           .join(",")
           .replace(/"/g, "");
         setFilePath(filepath_to_use);
-        setLoading(false);
-      });
+      })
+      .catch((error) => Error(error))
+      .finally(() => setLoading(false));
   }, [
     props.apiUrl,
     props.instrument,
