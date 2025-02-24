@@ -52,16 +52,20 @@ def find_file_instrument(ceph_dir: str, instrument: str, experiment_number: int,
     """
     # Run normal check
     basic_path = Path(ceph_dir) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced/{filename}"
-
     # Do a check as we are handling user entered data here
     with suppress(OSError):
         safe_check_filepath(filepath=basic_path, base_path=ceph_dir)
-
     if basic_path.exists():
         return basic_path
 
-    # Attempt to find file in autoreduced folder
+    # Does the autoreduced/RBNumber folder exist? If so use it, else use unknown
     autoreduced_folder = Path(ceph_dir) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced"
+    with suppress(OSError):
+        safe_check_filepath(filepath=autoreduced_folder, base_path=ceph_dir)
+    if autoreduced_folder.exists():
+        return _safe_find_file_in_dir(dir_path=autoreduced_folder, base_path=ceph_dir, filename=filename)
+
+    autoreduced_folder = Path(ceph_dir) / f"{instrument.upper()}/RBNumber/unknown/autoreduced"
     return _safe_find_file_in_dir(dir_path=autoreduced_folder, base_path=ceph_dir, filename=filename)
 
 
