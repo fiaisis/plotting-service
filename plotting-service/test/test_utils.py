@@ -110,15 +110,7 @@ def test_find_file_instrument_uses_unknown_when_rb_no_exist():
         instrument_name = "FUN_INST"
         experiment_number = 1231234
         filename = "MAR1912991240_asa_dasd_123.nxspe"
-        path = (
-                Path(tmpdir)
-                / instrument_name
-                / "RBNumber"
-                / "unknown"
-                / "autoreduced"
-                / "run-123141"
-                / filename
-        )
+        path = Path(tmpdir) / instrument_name / "RBNumber" / "unknown" / "autoreduced" / "run-123141" / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("Hello World!")
 
