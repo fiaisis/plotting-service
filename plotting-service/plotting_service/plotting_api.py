@@ -62,7 +62,14 @@ async def get() -> typing.Literal["ok"]:
     \f
     :return: "ok"
     """
-    return "ok"
+    try:
+        with Path("/ceph/GENERIC/autoreduce/healthy_file.txt").open("r") as fle:
+            lines = fle.readlines()
+            if lines[0] != "This is a healthy file! You have read it correctly!":
+                raise HTTPException(status_code=HTTPStatus.SERVICE_UNAVAILABLE)
+        return "ok"
+    except:  # noqa: E722
+        raise HTTPException(status_code=HTTPStatus.SERVICE_UNAVAILABLE) from None
 
 
 @app.get("/text/instrument/{instrument}/experiment_number/{experiment_number}", response_class=PlainTextResponse)
