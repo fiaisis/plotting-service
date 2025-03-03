@@ -65,7 +65,7 @@ async def get() -> typing.Literal["ok"]:
     try:
         with Path("/ceph/GENERIC/autoreduce/healthy_file.txt").open("r") as fle:
             lines = fle.readlines()
-            if lines[0] != "This is a healthy file! You have read it correctly!":
+            if lines[0] != "This is a healthy file! You have read it correctly!\n":
                 raise HTTPException(status_code=HTTPStatus.SERVICE_UNAVAILABLE)
         return "ok"
     except:  # noqa: E722
