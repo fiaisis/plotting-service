@@ -67,8 +67,8 @@ async def get() -> typing.Literal["ok"]:
             lines = fle.readlines()
             if lines[0] != "This is a healthy file! You have read it correctly!":
                 raise HTTPException(status_code=HTTPStatus.SERVICE_UNAVAILABLE)
-        return "ok" #noqa: E722
-    except:
+        return "ok"
+    except: #noqa: E722
         raise HTTPException(status_code=HTTPStatus.SERVICE_UNAVAILABLE) from None
 
 
