@@ -1,5 +1,6 @@
 import os
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -18,6 +19,7 @@ STAFF_TOKEN = (
     "-ktYEwdUfg5_PmUocmrAonZ6lwPJdcMoklWnVME1wLE"
 )
 
+
 class AwaitableNonAsyncMagicMock(mock.MagicMock):
     def __await__(self) -> Iterator[Any]:
         return iter([])
@@ -30,7 +32,7 @@ def api_key_setter():
     os.environ.pop("API_KEY")
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_check_permissions_api_key():
     request = mock.MagicMock()
     request.headers.get("Authorization").split.return_value = [None, "foo"]
@@ -41,7 +43,7 @@ async def test_check_permissions_api_key():
     call_next.assert_called_once_with(request)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_check_permissions_api_key_failed():
     os.environ["API_KEY"] = "ActuallyADecentAPIKey"
     request = mock.MagicMock()
@@ -54,7 +56,7 @@ async def test_check_permissions_api_key_failed():
     call_next.assert_not_called()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_check_permissions_token_user():
     request = mock.MagicMock()
     request.url.path = "/data?path=/"
@@ -62,17 +64,18 @@ async def test_check_permissions_token_user():
     call_next = AwaitableNonAsyncMagicMock()
     experiment_number = str(mock.MagicMock())
 
-    with (mock.patch("plotting_service.plotting_api.find_experiment_number") as experiment_number_mock,
-          mock.patch(
-            "plotting_service.plotting_api.get_experiments_for_user") as get_experiments_for_user_mock):
-            experiment_number_mock.return_value = experiment_number
-            get_experiments_for_user_mock.return_value = [experiment_number]
-            await check_permissions(request, call_next)
+    with (
+        mock.patch("plotting_service.plotting_api.find_experiment_number") as experiment_number_mock,
+        mock.patch("plotting_service.plotting_api.get_experiments_for_user") as get_experiments_for_user_mock,
+    ):
+        experiment_number_mock.return_value = experiment_number
+        get_experiments_for_user_mock.return_value = [experiment_number]
+        await check_permissions(request, call_next)
 
     call_next.assert_called_once_with(request)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_check_permissions_token_user_failed_no_perms():
     request = mock.MagicMock()
     request.headers.get("Authorization").split.return_value = [None, USER_TOKEN]
@@ -84,7 +87,7 @@ async def test_check_permissions_token_user_failed_no_perms():
     call_next.assert_not_called()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_check_permissions_token_staff():
     request = mock.MagicMock()
     request.headers.get("Authorization").split.return_value = [None, STAFF_TOKEN]
@@ -95,7 +98,7 @@ async def test_check_permissions_token_staff():
     call_next.assert_called_once_with(request)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_check_permissions_token_failed_bad_token():
     request = mock.MagicMock()
     request.headers.get("Authorization").split.return_value = [None, "bad_token"]
