@@ -143,7 +143,7 @@ async def find_file_generic_user_number(user_number: int, filename: str) -> str:
 
 
 @app.middleware("http")
-async def check_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:
+async def check_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:  # noqa: C901, PLR0911
     """
     Middleware that checks the requestee token has permissions for that experiment
     :param request: The request to check
