@@ -36,7 +36,6 @@ logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
-API_KEY = os.environ.get("API_KEY", "")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = bool(os.environ.get("DEV_MODE", False))
@@ -166,7 +165,8 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
 
     token = auth_header.split(" ")[1]
 
-    if token == API_KEY and API_KEY != "":
+    api_key = os.environ.get("API_KEY", "")
+    if token == api_key and api_key != "":
         return await call_next(request)
 
     try:
