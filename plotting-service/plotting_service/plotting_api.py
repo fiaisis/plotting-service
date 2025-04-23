@@ -143,7 +143,7 @@ async def find_file_generic_user_number(user_number: int, filename: str) -> str:
 
 
 @app.middleware("http")
-async def check_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:
+async def check_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:  # noqa: C901, PLR0911
     """
     Middleware that checks the requestee token has permissions for that experiment
     :param request: The request to check
@@ -164,6 +164,10 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         raise HTTPException(HTTPStatus.UNAUTHORIZED, "Unauthenticated")
 
     token = auth_header.split(" ")[1]
+
+    api_key = os.environ.get("API_KEY", "")
+    if token == api_key and api_key != "":
+        return await call_next(request)
 
     try:
         user = get_user_from_token(token)
