@@ -32,7 +32,7 @@ def api_key_setter():
     os.environ.pop("API_KEY")
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_check_permissions_api_key():
     request = mock.MagicMock()
     request.headers.get("Authorization").split.return_value = [None, "foo"]
@@ -43,7 +43,7 @@ async def test_check_permissions_api_key():
     call_next.assert_called_once_with(request)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_check_permissions_api_key_failed():
     os.environ["API_KEY"] = "ActuallyADecentAPIKey"
     request = mock.MagicMock()
@@ -56,7 +56,7 @@ async def test_check_permissions_api_key_failed():
     call_next.assert_not_called()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_check_permissions_token_user():
     request = mock.MagicMock()
     request.url.path = "/data?path=/"
@@ -75,7 +75,7 @@ async def test_check_permissions_token_user():
     call_next.assert_called_once_with(request)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_check_permissions_token_user_failed_no_perms():
     request = mock.MagicMock()
     request.headers.get("Authorization").split.return_value = [None, USER_TOKEN]
@@ -87,7 +87,7 @@ async def test_check_permissions_token_user_failed_no_perms():
     call_next.assert_not_called()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_check_permissions_token_staff():
     request = mock.MagicMock()
     request.headers.get("Authorization").split.return_value = [None, STAFF_TOKEN]
@@ -98,7 +98,7 @@ async def test_check_permissions_token_staff():
     call_next.assert_called_once_with(request)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_check_permissions_token_failed_bad_token():
     request = mock.MagicMock()
     request.headers.get("Authorization").split.return_value = [None, "bad_token"]
