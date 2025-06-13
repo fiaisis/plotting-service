@@ -9,7 +9,7 @@ dependencies = [
     "uvicorn==0.32.0",
     "h5grove[fastapi]==2.3.0",
     "PyJWT==2.9.0",
-    "requests==2.32.3"
+    "requests==2.32.4"
 ]
 
 [project.urls]
