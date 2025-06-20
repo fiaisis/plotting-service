@@ -38,7 +38,7 @@ ALLOWED_ORIGINS = ["*"]
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
-DEV_MODE = bool(os.environ.get("DEV_MODE", False))
+DEV_MODE = os.environ.get("DEV_MODE", "False").lower() == "true"
 if DEV_MODE:
     logger.info("Development only mode")
 else:
