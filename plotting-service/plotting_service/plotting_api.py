@@ -27,8 +27,6 @@ from plotting_service.utils import (
     request_path_check,
 )
 
-# import tifffile  # pip install tifffile
-
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
     handlers=[stdout_handler],
