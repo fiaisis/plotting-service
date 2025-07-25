@@ -229,14 +229,21 @@ async def get_latest_imat_image() -> FileResponse:
         raise HTTPException(HTTPStatus.NOT_FOUND, "No RB folders under IMAT_DIR")
     logger.info("RB dir selected: %s", rb_dir)
 
-    # Find newest sample folder
-    sample_dirs = [d for d in rb_dir.iterdir() if d.is_dir()]
-    sample_dir = _newest(sample_dirs)
-    if sample_dir is None:
+    # Find newest outer sample folder
+    outer_sample_dirs = [d for d in rb_dir.iterdir() if d.is_dir()]
+    outer_sample_dir = _newest(outer_sample_dirs)
+    if outer_sample_dir is None:
         raise HTTPException(HTTPStatus.NOT_FOUND, f"No sample folders inside {rb_dir}")
-    logger.info("Sample dir selected: %s", sample_dir)
+    logger.info("Outer sample dir selected: %s", outer_sample_dir)
 
-    # Determine whether newest file is .tiff
+    # Find newest inner sample folder
+    inner_sample_dirs = [d for d in outer_sample_dir.iterdir() if d.is_dir()]
+
+    # If there is no extra level just use the outer dir itself
+    sample_dir = _newest(inner_sample_dirs) or outer_sample_dir
+    logger.info("Inner sample dir selected: %s", sample_dir)
+
+    # Find newest .tiff file
     newest_img = next(
         (
             p
@@ -252,22 +259,17 @@ async def get_latest_imat_image() -> FileResponse:
     if newest_img is None:
         raise HTTPException(
             HTTPStatus.NOT_FOUND,
-            f"No .tiff or .fits images in {sample_dir}",
+            f"No .tif or .tiff images in {sample_dir}",
         )
-    logger.info("Newest image candidate: %s", newest_img)
+    logger.info("Newest TIFF: %s", newest_img)
 
-    # Return TIFF directly if available
-    if newest_img.suffix.lower() in {".tiff", ".tif"}:
-        guess = f"Latest TIFF in {sample_dir.name}"
-        return FileResponse(
-            newest_img,
-            media_type="image/tiff",
-            filename=newest_img.name,
-            headers={"X-Imat-Guess": guess},
-        )
-
-    # No TIFF is found
-    raise HTTPException(HTTPStatus.NOT_FOUND, "No valid image file found to return.")
+    # Serve the file
+    return FileResponse(
+        newest_img,
+        media_type="image/tiff",
+        filename=newest_img.name,
+        headers={"X-Imat-Guess": f"Latest TIFF in {sample_dir.name}"},
+    )
 
 
 app.include_router(router)
