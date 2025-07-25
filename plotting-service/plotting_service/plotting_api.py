@@ -211,6 +211,17 @@ def _newest(paths: list[Path]) -> Path | None:
     summary="Return latest IMAT image (TIFF directly, averaged FITS otherwise)",
 )
 async def get_latest_imat_image() -> FileResponse:
+    """
+    Return the most recently modified .tif or .tiff image from the IMAT
+    directory.
+
+    Expected layout (depth = 3):
+        IMAT_DIR/
+            RB12345/
+                sampleA/
+                    sampleA_1/
+                        *.tif[f]
+    """
     # Find newest RB folder
     rb_dirs = [d for d in IMAT_DIR.iterdir() if d.is_dir() and re.fullmatch(r"RB\d+", d.name)]
     rb_dir = _newest(rb_dirs)
