@@ -4,12 +4,14 @@ Main module
 
 import logging
 import os
+import re
 import sys
 import typing
 from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
@@ -25,6 +27,8 @@ from plotting_service.utils import (
     request_path_check,
 )
 
+# import tifffile  # pip install tifffile
+
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
     handlers=[stdout_handler],
@@ -37,6 +41,8 @@ logger.info("Starting Plotting Service")
 ALLOWED_ORIGINS = ["*"]
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
+IMAT_DIR = os.environ.get("IMAT_DIR", "/imat")
+logger.info("Setting IMAT directory to %s", IMAT_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = os.environ.get("DEV_MODE", "False").lower() == "true"
 if DEV_MODE:
@@ -195,6 +201,64 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         return await call_next(request)
 
     raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden")
+
+
+def _newest(paths: list[Path]) -> Path | None:
+    """Return newest path by mtime or None."""
+    return max(paths, key=lambda p: p.stat().st_mtime, default=None)
+
+
+@app.get(
+    "/imat/latest-image",
+    summary="Return latest IMAT image (TIFF directly, averaged FITS otherwise)",
+)
+async def get_latest_imat_image() -> FileResponse:
+    # Find newest RB folder
+    rb_dirs = [d for d in IMAT_DIR.iterdir() if d.is_dir() and re.fullmatch(r"RB\d+", d.name)]
+    rb_dir = _newest(rb_dirs)
+    if rb_dir is None:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "No RB folders under IMAT_DIR")
+    logger.info("RB dir selected: %s", rb_dir)
+
+    # Find newest sample folder
+    sample_dirs = [d for d in rb_dir.iterdir() if d.is_dir()]
+    sample_dir = _newest(sample_dirs)
+    if sample_dir is None:
+        raise HTTPException(HTTPStatus.NOT_FOUND, f"No sample folders inside {rb_dir}")
+    logger.info("Sample dir selected: %s", sample_dir)
+
+    # Determine whether newest file is .tiff
+    newest_img = next(
+        (
+            p
+            for p in sorted(
+                sample_dir.rglob("*"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            if p.suffix.lower() in {".tiff", ".tif"}
+        ),
+        None,
+    )
+    if newest_img is None:
+        raise HTTPException(
+            HTTPStatus.NOT_FOUND,
+            f"No .tiff or .fits images in {sample_dir}",
+        )
+    logger.info("Newest image candidate: %s", newest_img)
+
+    # Return TIFF directly if available
+    if newest_img.suffix.lower() in {".tiff", ".tif"}:
+        guess = f"Latest TIFF in {sample_dir.name}"
+        return FileResponse(
+            newest_img,
+            media_type="image/tiff",
+            filename=newest_img.name,
+            headers={"X-Imat-Guess": guess},
+        )
+
+    # No TIFF is found
+    raise HTTPException(HTTPStatus.NOT_FOUND, "No valid image file found to return.")
 
 
 app.include_router(router)
