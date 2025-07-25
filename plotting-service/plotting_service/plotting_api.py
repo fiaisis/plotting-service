@@ -39,7 +39,7 @@ logger.info("Starting Plotting Service")
 ALLOWED_ORIGINS = ["*"]
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
-IMAT_DIR = os.environ.get("IMAT_DIR", "/imat")
+IMAT_DIR: Path = Path(os.getenv("IMAT_DIR", "/ceph/IMAT")).resolve()
 logger.info("Setting IMAT directory to %s", IMAT_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = os.environ.get("DEV_MODE", "False").lower() == "true"
