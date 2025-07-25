@@ -7,8 +7,10 @@ import os
 import re
 import sys
 import typing
+from collections.abc import Sequence
 from http import HTTPStatus
 from pathlib import Path
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -201,9 +203,9 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden")
 
 
-def _newest(paths: list[Path]) -> Path | None:
-    """Return newest path by mtime or None."""
-    return max(paths, key=lambda p: p.stat().st_mtime, default=None)
+def _newest(paths: Sequence[Path]) -> Optional[Path]:
+    """Return the Path with the newest mtime, or None if paths is empty."""
+    return max(paths, key=lambda p: p.stat().st_mtime) if paths else None
 
 
 @app.get(
