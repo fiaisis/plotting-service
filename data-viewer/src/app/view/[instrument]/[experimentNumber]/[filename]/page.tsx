@@ -13,7 +13,7 @@ export default function DataPage({
   const fileExtension = filename.split(".").pop() ?? "";
   const apiUrl = process.env.API_URL ?? "http://localhost:8000";
   // Files to be viewed with the TextViewer, as text files
-  const textFiles: Array<string> = ["txt", "csv", "gss", "abc"];
+  const textFiles: Array<string> = ["txt", "csv", "gss", "abc", "prm"];
   return (
     <main className="h5-container">
       {textFiles.includes(fileExtension) ? (
