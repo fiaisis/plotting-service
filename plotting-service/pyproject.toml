@@ -9,7 +9,7 @@ dependencies = [
     "uvicorn==0.35.0",
     "h5grove[fastapi]==2.3.0",
     "PyJWT==2.10.1",
-    "requests==2.32.4"
+    "requests==2.32.5"
 ]
 
 [project.urls]
@@ -17,16 +17,16 @@ dependencies = [
 
 [project.optional-dependencies]
 formatting = [
-    "ruff==0.12.3",
-    "mypy==1.17.0",
+    "ruff==0.12.12",
+    "mypy==1.17.1",
     "plotting-service[test]",
-    "types-requests==2.32.4.20250611",
+    "types-requests==2.32.4.20250809",
     "types-urllib3==1.26.25.14",
 ]
 
 test = [
-    "pytest==8.4.1",
-    "pytest-cov==6.2.1",
+    "pytest==8.4.2",
+    "pytest-cov==7.0.0",
     "pytest-random-order==1.2.0",
     "pytest-asyncio==1.1.0"
 ]
