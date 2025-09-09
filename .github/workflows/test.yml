@@ -53,7 +53,7 @@ jobs:
           start: yarn start
           working-directory: data-viewer
           headed: true
-          browser: firefox
+          browser: chrome
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4

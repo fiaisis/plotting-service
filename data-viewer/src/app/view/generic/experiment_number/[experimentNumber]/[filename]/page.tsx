@@ -12,7 +12,7 @@ export default function GenericExperimentDataPage({
   const { experimentNumber, filename } = params;
   const fileExtension = filename.split(".").pop() ?? "nxs";
   const apiUrl = process.env.API_URL ?? "http://localhost:8000";
-  const textFiles: Array<string> = ["txt", "csv", "gss", "abc"];
+  const textFiles: Array<string> = ["txt", "csv", "gss", "abc", "prm"];
   return (
     <main className="h5-container">
       {textFiles.includes(fileExtension) ? (
