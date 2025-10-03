@@ -188,11 +188,10 @@ async def get_processed_data(instrument: str, experiment_number: int, filename: 
 
 @app.get("/echarts_meta/{instrument}/{experiment_number}")
 async def get_echarts_data(instrument: str, experiment_number: int, filename: str) -> Metadata:
-    # filename = CEPH_DIR + "/" + str(request_path_check(path = find_file_instrument(
-    #     ceph_dir=CEPH_DIR, instrument=instrument, experiment_number=experiment_number, filename=filename
-    # ), base_dir=CEPH_DIR))
+    filename = CEPH_DIR + "/" + str(request_path_check(path = find_file_instrument(
+        ceph_dir=CEPH_DIR, instrument=instrument, experiment_number=experiment_number, filename=filename
+    ), base_dir=CEPH_DIR))
 
-    full_filename_path = CEPH_DIR + "/" + filename
     try:
         await ensure_path_exists(full_filename_path, "/")
         try:
