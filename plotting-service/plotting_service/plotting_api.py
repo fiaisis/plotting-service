@@ -4,16 +4,20 @@ Main module
 
 import logging
 import os
+import re
 import sys
+import tempfile
 import typing
+import zipfile
 from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from h5grove.fastapi_utils import router, settings  # type: ignore
+from starlette.background import BackgroundTask
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import PlainTextResponse
+from starlette.responses import FileResponse, PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
@@ -39,6 +43,7 @@ CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 IMAT_DIR: Path = Path(os.getenv("IMAT_DIR", "/IMAT")).resolve()
 logger.info("Setting IMAT directory to %s", IMAT_DIR)
+IMAGE_SUFFIXES = {".tif", ".tiff", ".fits"}
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = os.environ.get("DEV_MODE", "False").lower() == "true"
 if DEV_MODE:
@@ -197,6 +202,70 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         return await call_next(request)
 
     raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden")
+
+
+def _latest_image_in_dir(directory: Path) -> Path | None:
+    """Return the newest image file under directory, searching recursively."""
+    latest_path: Path | None = None
+    latest_mtime = float("-inf")
+    for entry in directory.rglob("*"):
+        if entry.is_file() and entry.suffix.lower() in IMAGE_SUFFIXES:
+            mtime = entry.stat().st_mtime
+            if mtime > latest_mtime:
+                latest_path = entry
+                latest_mtime = mtime
+    return latest_path
+
+
+@app.get(
+    "/imat/latest-images",
+    summary="Bundle the latest image from each IMAT sample folder",
+)
+async def get_latest_imat_images() -> FileResponse:
+    """Collect the newest image from each sample folder and serve them as a ZIP bundle."""
+    # Ignore non RB-prefixed folders
+    rb_dirs = [d for d in IMAT_DIR.iterdir() if d.is_dir() and re.fullmatch(r"RB\d+", d.name)]
+    if not rb_dirs:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "No RB folders under IMAT_DIR")
+
+    latest_images: list[tuple[Path, Path]] = []
+    for rb_dir in rb_dirs:
+        sample_dirs = [d for d in rb_dir.iterdir() if d.is_dir()]
+        for sample_dir in sample_dirs:
+            latest_img = _latest_image_in_dir(sample_dir)
+            if latest_img is None:
+                continue
+            try:
+                arcname = Path(rb_dir.name) / latest_img.relative_to(rb_dir)
+            except ValueError:
+                arcname = Path(rb_dir.name) / sample_dir.name / latest_img.name
+            latest_images.append((latest_img, arcname))
+
+    if not latest_images:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "No images found in IMAT_DIR")
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp_file:
+        tmp_path = Path(tmp_file.name)
+
+    # Package the selected files into a ZIP archive
+    with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+        for src, arcname in latest_images:
+            bundle.write(src, arcname=str(arcname))
+
+    def _cleanup(path: Path) -> None:
+        try:
+            path.unlink(missing_ok=True)
+        except Exception as exc:
+            logger.warning("Could not remove temporary file %s: %s", path, exc)
+
+    # Serve the file response as a ZIP
+    # Remove temporary archive once the response completes
+    return FileResponse(
+        tmp_path,
+        media_type="application/zip",
+        filename="imat-latest-images.zip",
+        background=BackgroundTask(_cleanup, tmp_path),
+    )
 
 
 app.include_router(router)
