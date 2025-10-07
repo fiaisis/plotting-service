@@ -184,28 +184,28 @@ async def get_processed_data(instrument: str, experiment_number: int, filename: 
         raise e
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Unknown error")
+        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Unknown error") from None
 
 @app.get("/echarts_meta/{instrument}/{experiment_number}")
-async def get_echarts_data(instrument: str, experiment_number: int, filename: str) -> Metadata:
+async def get_echarts_metadata(instrument: str, experiment_number: int, filename: str) -> Metadata:
     filename = CEPH_DIR + "/" + str(request_path_check(path = find_file_instrument(
         ceph_dir=CEPH_DIR, instrument=instrument, experiment_number=experiment_number, filename=filename
     ), base_dir=CEPH_DIR))
 
     try:
-        await ensure_path_exists(full_filename_path, "/")
+        await ensure_path_exists(filename, "/")
         try:
-            await ensure_path_exists(full_filename_path, "/ws_out")
-            await ensure_path_exists(full_filename_path, "/ws_out/data")
-            values_meta = await h5grove.fastapi_utils.get_meta(file=full_filename_path, path="/ws_out/data/data")
+            await ensure_path_exists(filename, "/ws_out")
+            await ensure_path_exists(filename, "/ws_out/data")
+            values_meta = await h5grove.fastapi_utils.get_meta(file=filename, path="/ws_out/data/data")
         except HTTPException:
-            await ensure_path_exists(full_filename_path, "/mantid_workspace_1")
-            await ensure_path_exists(full_filename_path, "/mantid_workspace_1/workspace")
-            values_meta = await h5grove.fastapi_utils.get_meta(file=full_filename_path, path="/mantid_workspace_1/workspace/values")
-            atr_axis1 = await h5grove.fastapi_utils.get_attr(file=full_filename_path, path="/mantid_workspace_1/workspace/axis1", attr_keys=["units"])
-            atr_axis2 = await h5grove.fastapi_utils.get_attr(file=full_filename_path, path="/mantid_workspace_1/workspace/axis2", attr_keys=["units"])
-            stat_axis1 = await h5grove.fastapi_utils.get_stats(file=full_filename_path, path="/mantid_workspace_1/workspace/axis1")
-            stat_axis2 = await h5grove.fastapi_utils.get_stats(file=full_filename_path, path="/mantid_workspace_1/workspace/axis2")
+            await ensure_path_exists(filename, "/mantid_workspace_1")
+            await ensure_path_exists(filename, "/mantid_workspace_1/workspace")
+            values_meta = await h5grove.fastapi_utils.get_meta(file=filename, path="/mantid_workspace_1/workspace/values")
+            atr_axis1 = await h5grove.fastapi_utils.get_attr(file=filename, path="/mantid_workspace_1/workspace/axis1", attr_keys=["units"])
+            atr_axis2 = await h5grove.fastapi_utils.get_attr(file=filename, path="/mantid_workspace_1/workspace/axis2", attr_keys=["units"])
+            stat_axis1 = await h5grove.fastapi_utils.get_stats(file=filename, path="/mantid_workspace_1/workspace/axis1")
+            stat_axis2 = await h5grove.fastapi_utils.get_stats(file=filename, path="/mantid_workspace_1/workspace/axis2")
 
         meta_data = json.loads(values_meta.body.decode())
         atr_axis1_data = json.loads(atr_axis1.body.decode())
@@ -213,8 +213,7 @@ async def get_echarts_data(instrument: str, experiment_number: int, filename: st
         stat_axis1_data = json.loads(stat_axis1.body.decode())
         stat_axis2_data = json.loads(stat_axis2.body.decode())
 
-        meta_object = Metadata(filename=filename, shape=len(meta_data["shape"]), x_axis_label=atr_axis1_data["units"], y_axis_label=atr_axis2_data["units"], x_axis_min=stat_axis1_data["min"], x_axis_max=stat_axis1_data["max"], y_axis_min=stat_axis2_data["min"], y_axis_max=stat_axis2_data["max"])
-        return meta_object
+        return Metadata(filename=filename, shape=len(meta_data["shape"]), x_axis_label=atr_axis1_data["units"], y_axis_label=atr_axis2_data["units"], x_axis_min=stat_axis1_data["min"], x_axis_max=stat_axis1_data["max"], y_axis_min=stat_axis2_data["min"], y_axis_max=stat_axis2_data["max"])
 
     except HTTPException as e:
         raise e
@@ -250,14 +249,14 @@ async def get_echarts_data(instrument: str, experiment_number: int, filename: st
         raise e
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Unknown error")
+        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Unknown error") from None
 
 # Helper to raise 404 if a meta request fails
 async def ensure_path_exists(file: str, path: str):
     try:
         meta_response = await h5grove.fastapi_utils.get_meta(file=file, path=path)
     except h5grove.fastapi_utils.H5GroveException as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Path not found: {path}")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Path not found: {path}") from None
 
 def bucket_and_join_data(axis: List[float], data: List[float]) -> List[List[float]]:
     axis_bucketed = [(axis[i] + axis[i+1]) / 2 for i in range(len(axis) - 1)]
