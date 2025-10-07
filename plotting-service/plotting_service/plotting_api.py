@@ -219,7 +219,7 @@ async def get_echarts_metadata(instrument: str, experiment_number: int, filename
         raise e
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Unknown error")
+        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Unknown error") from None
 
 @app.get("/echarts_data/{instrument}/{experiment_number}")
 async def get_echarts_data(instrument: str, experiment_number: int, filename: str, selection: int) -> JSONResponse:
@@ -254,7 +254,7 @@ async def get_echarts_data(instrument: str, experiment_number: int, filename: st
 # Helper to raise 404 if a meta request fails
 async def ensure_path_exists(file: str, path: str):
     try:
-        meta_response = await h5grove.fastapi_utils.get_meta(file=file, path=path)
+        await h5grove.fastapi_utils.get_meta(file=file, path=path)
     except h5grove.fastapi_utils.H5GroveException as e:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Path not found: {path}") from None
 
