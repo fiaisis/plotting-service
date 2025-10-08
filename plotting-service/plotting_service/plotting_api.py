@@ -19,7 +19,7 @@ from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.background import BackgroundTask
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import FileResponse, PlainTextResponse, JSONResponse
+from starlette.responses import FileResponse, JSONResponse, PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
