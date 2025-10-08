@@ -2,6 +2,7 @@
 Main module
 """
 
+import json
 import logging
 import os
 import sys
@@ -9,14 +10,16 @@ import typing
 from http import HTTPStatus
 from pathlib import Path
 
+import h5grove.fastapi_utils
 from fastapi import FastAPI, HTTPException
 from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import PlainTextResponse
+from starlette.responses import JSONResponse, PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
+from plotting_service.model import Metadata
 from plotting_service.utils import (
     find_experiment_number,
     find_file_experiment_number,
@@ -140,6 +143,173 @@ async def find_file_generic_user_number(user_number: int, filename: str) -> str:
     if path is None:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
     return str(request_path_check(path, base_dir=CEPH_DIR))
+
+
+@app.get("/processed_data/{instrument}/{experiment_number}")
+async def get_processed_data(instrument: str, experiment_number: int, filename: str) -> str:
+    filename = (
+        CEPH_DIR
+        + "/"
+        + str(
+            request_path_check(
+                path=find_file_instrument(
+                    ceph_dir=CEPH_DIR, instrument=instrument, experiment_number=experiment_number, filename=filename
+                ),
+                base_dir=CEPH_DIR,
+            )
+        )
+    )
+
+    try:
+        await ensure_path_exists(filename, "/")
+
+        try:
+            await ensure_path_exists(filename, "/ws_out")
+            await ensure_path_exists(filename, "/ws_out/data")
+            axis_x = await h5grove.fastapi_utils.get_data(file=filename, path="/ws_out/data/energy")
+            axis_y = await h5grove.fastapi_utils.get_data(file=filename, path="/ws_out/data/polar")
+            data = await h5grove.fastapi_utils.get_data(file=filename, path="/ws_out/data/data")
+
+        except HTTPException:
+            await ensure_path_exists(filename, "/mantid_workspace_1")
+            await ensure_path_exists(filename, "/mantid_workspace_1/workspace")
+            axis_x = await h5grove.fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/axis1")
+            axis_y = await h5grove.fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/axis2")
+            data = await h5grove.fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/values")
+
+        data_data = json.loads(data.body.decode())  # type: List[float]
+        axis_x_data = json.loads(axis_x.body.decode())  # type: List[float]
+        axis_y_data = json.loads(axis_y.body.decode())  # type: List[float]
+
+        formatted_list = [
+            [axis_x_data[x], axis_y_data[y], value] for y, row in enumerate(data_data) for x, value in enumerate(row)
+        ]
+        return JSONResponse(formatted_list)
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Unknown error") from None
+
+
+@app.get("/echarts_meta/{instrument}/{experiment_number}")
+async def get_echarts_metadata(instrument: str, experiment_number: int, filename: str) -> Metadata:
+    filename = (
+        CEPH_DIR
+        + "/"
+        + str(
+            request_path_check(
+                path=find_file_instrument(
+                    ceph_dir=CEPH_DIR, instrument=instrument, experiment_number=experiment_number, filename=filename
+                ),
+                base_dir=CEPH_DIR,
+            )
+        )
+    )
+
+    try:
+        await ensure_path_exists(filename, "/")
+        try:
+            await ensure_path_exists(filename, "/ws_out")
+            await ensure_path_exists(filename, "/ws_out/data")
+            values_meta = await h5grove.fastapi_utils.get_meta(file=filename, path="/ws_out/data/data")
+        except HTTPException:
+            await ensure_path_exists(filename, "/mantid_workspace_1")
+            await ensure_path_exists(filename, "/mantid_workspace_1/workspace")
+            values_meta = await h5grove.fastapi_utils.get_meta(
+                file=filename, path="/mantid_workspace_1/workspace/values"
+            )
+            atr_axis1 = await h5grove.fastapi_utils.get_attr(
+                file=filename, path="/mantid_workspace_1/workspace/axis1", attr_keys=["units"]
+            )
+            atr_axis2 = await h5grove.fastapi_utils.get_attr(
+                file=filename, path="/mantid_workspace_1/workspace/axis2", attr_keys=["units"]
+            )
+            stat_axis1 = await h5grove.fastapi_utils.get_stats(
+                file=filename, path="/mantid_workspace_1/workspace/axis1"
+            )
+            stat_axis2 = await h5grove.fastapi_utils.get_stats(
+                file=filename, path="/mantid_workspace_1/workspace/axis2"
+            )
+
+        meta_data = json.loads(values_meta.body.decode())
+        atr_axis1_data = json.loads(atr_axis1.body.decode())
+        atr_axis2_data = json.loads(atr_axis2.body.decode())
+        stat_axis1_data = json.loads(stat_axis1.body.decode())
+        stat_axis2_data = json.loads(stat_axis2.body.decode())
+
+        return Metadata(
+            filename=filename,
+            shape=len(meta_data["shape"]),
+            x_axis_label=atr_axis1_data["units"],
+            y_axis_label=atr_axis2_data["units"],
+            x_axis_min=stat_axis1_data["min"],
+            x_axis_max=stat_axis1_data["max"],
+            y_axis_min=stat_axis2_data["min"],
+            y_axis_max=stat_axis2_data["max"],
+        )
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Unknown error") from None
+
+
+@app.get("/echarts_data/{instrument}/{experiment_number}")
+async def get_echarts_data(instrument: str, experiment_number: int, filename: str, selection: int) -> JSONResponse:
+    filename = (
+        CEPH_DIR
+        + "/"
+        + str(
+            request_path_check(
+                path=find_file_instrument(
+                    ceph_dir=CEPH_DIR, instrument=instrument, experiment_number=experiment_number, filename=filename
+                ),
+                base_dir=CEPH_DIR,
+            )
+        )
+    )
+
+    try:
+        await ensure_path_exists(filename, "/")
+
+        try:
+            await ensure_path_exists(filename, "/ws_out")
+            await ensure_path_exists(filename, "/ws_out/data")
+            axis = await h5grove.fastapi_utils.get_data(file=filename, path="/ws_out/data/energy")
+            data = await h5grove.fastapi_utils.get_data(file=filename, path="/ws_out/data/data", selection=selection)
+        except HTTPException:
+            await ensure_path_exists(filename, "/mantid_workspace_1")
+            await ensure_path_exists(filename, "/mantid_workspace_1/workspace")
+            axis = await h5grove.fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/axis1")
+            data = await h5grove.fastapi_utils.get_data(
+                file=filename, path="/mantid_workspace_1/workspace/values", selection=selection
+            )
+
+        data_data = json.loads(data.body.decode())  # type: List[float]
+        axis_data = json.loads(axis.body.decode())  # type: List[float]
+        return JSONResponse(bucket_and_join_data(axis_data, data_data))
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Unknown error") from None
+
+
+# Helper to raise 404 if a meta request fails
+async def ensure_path_exists(file: str, path: str):
+    try:
+        await h5grove.fastapi_utils.get_meta(file=file, path=path)
+    except h5grove.fastapi_utils.H5GroveException:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Path not found: {path}") from None
+
+
+def bucket_and_join_data(axis: list[float], data: list[float]) -> list[list[float]]:
+    axis_bucketed = [(axis[i] + axis[i + 1]) / 2 for i in range(len(axis) - 1)]
+    return [[x, y] for x, y in zip(axis_bucketed, data, strict=False)]
 
 
 @app.middleware("http")
