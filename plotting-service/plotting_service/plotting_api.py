@@ -4,19 +4,17 @@ Main module
 
 import json
 import logging
+import mimetypes
 import os
 import re
 import sys
-import tempfile
 import typing
-import zipfile
 from http import HTTPStatus
 from pathlib import Path
 
 import h5grove.fastapi_utils
 from fastapi import FastAPI, HTTPException
 from h5grove.fastapi_utils import router, settings  # type: ignore
-from starlette.background import BackgroundTask
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, PlainTextResponse
@@ -44,7 +42,7 @@ logger.info("Starting Plotting Service")
 ALLOWED_ORIGINS = ["*"]
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
-IMAT_DIR: Path = Path(os.getenv("IMAT_DIR", "/IMAT")).resolve()
+IMAT_DIR: Path = Path(os.getenv("IMAT_DIR", "/imat")).resolve()
 logger.info("Setting IMAT directory to %s", IMAT_DIR)
 IMAGE_SUFFIXES = {".tif", ".tiff", ".fits"}
 settings.base_dir = Path(CEPH_DIR).resolve()
@@ -388,53 +386,41 @@ def _latest_image_in_dir(directory: Path) -> Path | None:
 
 
 @app.get(
-    "/imat/latest-images",
-    summary="Bundle the latest image from each IMAT sample folder",
+    "/imat/latest-image",
+    summary="Fetch the latest IMAT image",
 )
-async def get_latest_imat_images() -> FileResponse:
-    """Collect the newest image from each sample folder and serve them as a ZIP bundle."""
-    # Ignore non RB-prefixed folders
+async def get_latest_imat_image() -> FileResponse:
+    """Return the newest image from any RB folder within the IMAT directory."""
+    # Find RB* directories directly under IMAT root; ignore unrelated folders
     rb_dirs = [d for d in IMAT_DIR.iterdir() if d.is_dir() and re.fullmatch(r"RB\d+", d.name)]
     if not rb_dirs:
         raise HTTPException(HTTPStatus.NOT_FOUND, "No RB folders under IMAT_DIR")
 
-    latest_images: list[tuple[Path, Path]] = []
-    for rb_dir in rb_dirs:
-        sample_dirs = [d for d in rb_dir.iterdir() if d.is_dir()]
-        for sample_dir in sample_dirs:
-            latest_img = _latest_image_in_dir(sample_dir)
-            if latest_img is None:
-                continue
-            try:
-                arcname = Path(rb_dir.name) / latest_img.relative_to(rb_dir)
-            except ValueError:
-                arcname = Path(rb_dir.name) / sample_dir.name / latest_img.name
-            latest_images.append((latest_img, arcname))
+    latest_path: Path | None = None
+    latest_mtime = float("-inf")
 
-    if not latest_images:
+    for rb_dir in rb_dirs:
+        rb_latest = _latest_image_in_dir(rb_dir)
+        if rb_latest is None:
+            continue
+        rb_mtime = rb_latest.stat().st_mtime
+        # Keep track of the most recent image seen so far across all RB folders
+        if rb_mtime > latest_mtime:
+            latest_path = rb_latest
+            latest_mtime = rb_mtime
+
+    if latest_path is None:
         raise HTTPException(HTTPStatus.NOT_FOUND, "No images found in IMAT_DIR")
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp_file:
-        tmp_path = Path(tmp_file.name)
+    # Derive an appropriate media type so clients can handle the image correctly
+    media_type, _ = mimetypes.guess_type(str(latest_path))
+    if media_type is None:
+        media_type = "application/octet-stream"
 
-    # Package the selected files into a ZIP archive
-    with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
-        for src, arcname in latest_images:
-            bundle.write(src, arcname=str(arcname))
-
-    def _cleanup(path: Path) -> None:
-        try:
-            path.unlink(missing_ok=True)
-        except Exception as exc:
-            logger.warning("Could not remove temporary file %s: %s", path, exc)
-
-    # Serve the file response as a ZIP
-    # Remove temporary archive once the response completes
     return FileResponse(
-        tmp_path,
-        media_type="application/zip",
-        filename="imat-latest-images.zip",
-        background=BackgroundTask(_cleanup, tmp_path),
+        latest_path,
+        media_type=media_type,
+        filename=latest_path.name,
     )
 
 
