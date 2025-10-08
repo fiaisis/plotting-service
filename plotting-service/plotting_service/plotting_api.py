@@ -4,7 +4,9 @@ Main module
 
 import json
 import logging
+import mimetypes
 import os
+import re
 import sys
 import typing
 from http import HTTPStatus
@@ -15,7 +17,7 @@ from fastapi import FastAPI, HTTPException
 from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, PlainTextResponse
+from starlette.responses import FileResponse, JSONResponse, PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
@@ -40,6 +42,9 @@ logger.info("Starting Plotting Service")
 ALLOWED_ORIGINS = ["*"]
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
+IMAT_DIR: Path = Path(os.getenv("IMAT_DIR", "/imat")).resolve()
+logger.info("Setting IMAT directory to %s", IMAT_DIR)
+IMAGE_SUFFIXES = {".tif", ".tiff", ".fits"}
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = os.environ.get("DEV_MODE", "False").lower() == "true"
 if DEV_MODE:
@@ -66,7 +71,7 @@ async def get() -> typing.Literal["ok"]:
     :return: "ok"
     """
     try:
-        with Path("/ceph/GENERIC/autoreduce/healthy_file.txt").open("r") as fle:
+        with Path(f"{CEPH_DIR}/GENERIC/autoreduce/healthy_file.txt").open("r") as fle:
             lines = fle.readlines()
             if lines[0] != "This is a healthy file! You have read it correctly!\n":
                 raise HTTPException(status_code=HTTPStatus.SERVICE_UNAVAILABLE)
@@ -365,6 +370,58 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         return await call_next(request)
 
     raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden")
+
+
+def _latest_image_in_dir(directory: Path) -> Path | None:
+    """Return the newest image file under directory, searching recursively."""
+    latest_path: Path | None = None
+    latest_mtime = float("-inf")
+    for entry in directory.rglob("*"):
+        if entry.is_file() and entry.suffix.lower() in IMAGE_SUFFIXES:
+            mtime = entry.stat().st_mtime
+            if mtime > latest_mtime:
+                latest_path = entry
+                latest_mtime = mtime
+    return latest_path
+
+
+@app.get(
+    "/imat/latest-image",
+    summary="Fetch the latest IMAT image",
+)
+async def get_latest_imat_image() -> FileResponse:
+    """Return the newest image from any RB folder within the IMAT directory."""
+    # Find RB* directories directly under IMAT root; ignore unrelated folders
+    rb_dirs = [d for d in IMAT_DIR.iterdir() if d.is_dir() and re.fullmatch(r"RB\d+", d.name)]
+    if not rb_dirs:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "No RB folders under IMAT_DIR")
+
+    latest_path: Path | None = None
+    latest_mtime = float("-inf")
+
+    for rb_dir in rb_dirs:
+        rb_latest = _latest_image_in_dir(rb_dir)
+        if rb_latest is None:
+            continue
+        rb_mtime = rb_latest.stat().st_mtime
+        # Keep track of the most recent image seen so far across all RB folders
+        if rb_mtime > latest_mtime:
+            latest_path = rb_latest
+            latest_mtime = rb_mtime
+
+    if latest_path is None:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "No images found in IMAT_DIR")
+
+    # Derive an appropriate media type so clients can handle the image correctly
+    media_type, _ = mimetypes.guess_type(str(latest_path))
+    if media_type is None:
+        media_type = "application/octet-stream"
+
+    return FileResponse(
+        latest_path,
+        media_type=media_type,
+        filename=latest_path.name,
+    )
 
 
 app.include_router(router)
