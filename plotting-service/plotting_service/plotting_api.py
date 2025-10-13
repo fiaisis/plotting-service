@@ -397,7 +397,7 @@ async def get_latest_imat_image() -> FileResponse:
         raise HTTPException(HTTPStatus.NOT_FOUND, "No RB folders under IMAT_DIR")
 
     latest_path: Path | None = None
-    latest_mtime = float("-inf")
+    latest_mtime = 0
 
     for rb_dir in rb_dirs:
         rb_latest = _latest_image_in_dir(rb_dir)
