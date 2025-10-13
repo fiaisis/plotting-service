@@ -29,7 +29,7 @@ from plotting_service.utils import (
     request_path_check,
 )
 
-h5_fastapi_utils = typing.cast(typing.Any, importlib.import_module("h5grove.fastapi_utils"))
+h5_fastapi_utils = typing.cast("typing.Any", importlib.import_module("h5grove.fastapi_utils"))
 router = h5_fastapi_utils.router
 settings = h5_fastapi_utils.settings
 
@@ -185,9 +185,9 @@ async def get_processed_data(instrument: str, experiment_number: int, filename: 
             axis_y = await h5_fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/axis2")
             data = await h5_fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/values")
 
-        data_data = typing.cast(list[list[float]], json.loads(data.body.decode()))
-        axis_x_data = typing.cast(list[float], json.loads(axis_x.body.decode()))
-        axis_y_data = typing.cast(list[float], json.loads(axis_y.body.decode()))
+        data_data = typing.cast("list[list[float]]", json.loads(data.body.decode()))
+        axis_x_data = typing.cast("list[float]", json.loads(axis_x.body.decode()))
+        axis_y_data = typing.cast("list[float]", json.loads(axis_y.body.decode()))
 
         formatted_list = [
             [axis_x_data[x], axis_y_data[y], value] for y, row in enumerate(data_data) for x, value in enumerate(row)
@@ -225,21 +225,15 @@ async def get_echarts_metadata(instrument: str, experiment_number: int, filename
         except HTTPException:
             await ensure_path_exists(filename, "/mantid_workspace_1")
             await ensure_path_exists(filename, "/mantid_workspace_1/workspace")
-            values_meta = await h5_fastapi_utils.get_meta(
-                file=filename, path="/mantid_workspace_1/workspace/values"
-            )
+            values_meta = await h5_fastapi_utils.get_meta(file=filename, path="/mantid_workspace_1/workspace/values")
             atr_axis1 = await h5_fastapi_utils.get_attr(
                 file=filename, path="/mantid_workspace_1/workspace/axis1", attr_keys=["units"]
             )
             atr_axis2 = await h5_fastapi_utils.get_attr(
                 file=filename, path="/mantid_workspace_1/workspace/axis2", attr_keys=["units"]
             )
-            stat_axis1 = await h5_fastapi_utils.get_stats(
-                file=filename, path="/mantid_workspace_1/workspace/axis1"
-            )
-            stat_axis2 = await h5_fastapi_utils.get_stats(
-                file=filename, path="/mantid_workspace_1/workspace/axis2"
-            )
+            stat_axis1 = await h5_fastapi_utils.get_stats(file=filename, path="/mantid_workspace_1/workspace/axis1")
+            stat_axis2 = await h5_fastapi_utils.get_stats(file=filename, path="/mantid_workspace_1/workspace/axis2")
 
         meta_data = json.loads(values_meta.body.decode())
         atr_axis1_data = json.loads(atr_axis1.body.decode())
@@ -296,8 +290,8 @@ async def get_echarts_data(instrument: str, experiment_number: int, filename: st
                 file=filename, path="/mantid_workspace_1/workspace/values", selection=selection
             )
 
-        data_data = typing.cast(list[float], json.loads(data.body.decode()))
-        axis_data = typing.cast(list[float], json.loads(axis.body.decode()))
+        data_data = typing.cast("list[float]", json.loads(data.body.decode()))
+        axis_data = typing.cast("list[float]", json.loads(axis.body.decode()))
         return JSONResponse(bucket_and_join_data(axis_data, data_data))
 
     except HTTPException as e:
