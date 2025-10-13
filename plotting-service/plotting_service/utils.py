@@ -126,7 +126,7 @@ def find_experiment_number(request: Request) -> int:
     raise HTTPException(HTTPStatus.BAD_REQUEST, "Request missing experiment number")
 
 
-def request_path_check(path: Path, base_dir: str) -> Path:
+def request_path_check(path: Path | None, base_dir: str) -> Path:
     """
     Check if the path is not None, and remove the base dir from the path.
     :param path: Path to check

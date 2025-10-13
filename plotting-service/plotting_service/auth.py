@@ -2,14 +2,14 @@
 Auth functionality
 """
 
+import importlib
 import logging
 import os
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import Literal
+from typing import Any, Literal
 
 import jwt
-import requests
 from jwt import PyJWTError
 
 from plotting_service.exceptions import AuthError
@@ -19,6 +19,7 @@ FIA_AUTH_URL = os.environ.get("FIA_AUTH_URL")
 FIA_AUTH_API_KEY = os.environ.get("FIA_AUTH_API_KEY")
 
 logger = logging.getLogger(__name__)
+requests: Any = importlib.import_module("requests")
 
 
 @dataclass

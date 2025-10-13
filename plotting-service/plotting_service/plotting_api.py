@@ -2,6 +2,7 @@
 Main module
 """
 
+import importlib
 import json
 import logging
 import mimetypes
@@ -12,9 +13,7 @@ import typing
 from http import HTTPStatus
 from pathlib import Path
 
-import h5grove.fastapi_utils
 from fastapi import FastAPI, HTTPException
-from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, PlainTextResponse
@@ -29,6 +28,10 @@ from plotting_service.utils import (
     find_file_user_number,
     request_path_check,
 )
+
+h5_fastapi_utils = typing.cast(typing.Any, importlib.import_module("h5grove.fastapi_utils"))
+router = h5_fastapi_utils.router
+settings = h5_fastapi_utils.settings
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
@@ -151,7 +154,7 @@ async def find_file_generic_user_number(user_number: int, filename: str) -> str:
 
 
 @app.get("/processed_data/{instrument}/{experiment_number}")
-async def get_processed_data(instrument: str, experiment_number: int, filename: str) -> str:
+async def get_processed_data(instrument: str, experiment_number: int, filename: str) -> JSONResponse:
     filename = (
         CEPH_DIR
         + "/"
@@ -171,20 +174,20 @@ async def get_processed_data(instrument: str, experiment_number: int, filename: 
         try:
             await ensure_path_exists(filename, "/ws_out")
             await ensure_path_exists(filename, "/ws_out/data")
-            axis_x = await h5grove.fastapi_utils.get_data(file=filename, path="/ws_out/data/energy")
-            axis_y = await h5grove.fastapi_utils.get_data(file=filename, path="/ws_out/data/polar")
-            data = await h5grove.fastapi_utils.get_data(file=filename, path="/ws_out/data/data")
+            axis_x = await h5_fastapi_utils.get_data(file=filename, path="/ws_out/data/energy")
+            axis_y = await h5_fastapi_utils.get_data(file=filename, path="/ws_out/data/polar")
+            data = await h5_fastapi_utils.get_data(file=filename, path="/ws_out/data/data")
 
         except HTTPException:
             await ensure_path_exists(filename, "/mantid_workspace_1")
             await ensure_path_exists(filename, "/mantid_workspace_1/workspace")
-            axis_x = await h5grove.fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/axis1")
-            axis_y = await h5grove.fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/axis2")
-            data = await h5grove.fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/values")
+            axis_x = await h5_fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/axis1")
+            axis_y = await h5_fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/axis2")
+            data = await h5_fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/values")
 
-        data_data = json.loads(data.body.decode())  # type: List[float]
-        axis_x_data = json.loads(axis_x.body.decode())  # type: List[float]
-        axis_y_data = json.loads(axis_y.body.decode())  # type: List[float]
+        data_data = typing.cast(list[list[float]], json.loads(data.body.decode()))
+        axis_x_data = typing.cast(list[float], json.loads(axis_x.body.decode()))
+        axis_y_data = typing.cast(list[float], json.loads(axis_y.body.decode()))
 
         formatted_list = [
             [axis_x_data[x], axis_y_data[y], value] for y, row in enumerate(data_data) for x, value in enumerate(row)
@@ -218,23 +221,23 @@ async def get_echarts_metadata(instrument: str, experiment_number: int, filename
         try:
             await ensure_path_exists(filename, "/ws_out")
             await ensure_path_exists(filename, "/ws_out/data")
-            values_meta = await h5grove.fastapi_utils.get_meta(file=filename, path="/ws_out/data/data")
+            values_meta = await h5_fastapi_utils.get_meta(file=filename, path="/ws_out/data/data")
         except HTTPException:
             await ensure_path_exists(filename, "/mantid_workspace_1")
             await ensure_path_exists(filename, "/mantid_workspace_1/workspace")
-            values_meta = await h5grove.fastapi_utils.get_meta(
+            values_meta = await h5_fastapi_utils.get_meta(
                 file=filename, path="/mantid_workspace_1/workspace/values"
             )
-            atr_axis1 = await h5grove.fastapi_utils.get_attr(
+            atr_axis1 = await h5_fastapi_utils.get_attr(
                 file=filename, path="/mantid_workspace_1/workspace/axis1", attr_keys=["units"]
             )
-            atr_axis2 = await h5grove.fastapi_utils.get_attr(
+            atr_axis2 = await h5_fastapi_utils.get_attr(
                 file=filename, path="/mantid_workspace_1/workspace/axis2", attr_keys=["units"]
             )
-            stat_axis1 = await h5grove.fastapi_utils.get_stats(
+            stat_axis1 = await h5_fastapi_utils.get_stats(
                 file=filename, path="/mantid_workspace_1/workspace/axis1"
             )
-            stat_axis2 = await h5grove.fastapi_utils.get_stats(
+            stat_axis2 = await h5_fastapi_utils.get_stats(
                 file=filename, path="/mantid_workspace_1/workspace/axis2"
             )
 
@@ -283,18 +286,18 @@ async def get_echarts_data(instrument: str, experiment_number: int, filename: st
         try:
             await ensure_path_exists(filename, "/ws_out")
             await ensure_path_exists(filename, "/ws_out/data")
-            axis = await h5grove.fastapi_utils.get_data(file=filename, path="/ws_out/data/energy")
-            data = await h5grove.fastapi_utils.get_data(file=filename, path="/ws_out/data/data", selection=selection)
+            axis = await h5_fastapi_utils.get_data(file=filename, path="/ws_out/data/energy")
+            data = await h5_fastapi_utils.get_data(file=filename, path="/ws_out/data/data", selection=selection)
         except HTTPException:
             await ensure_path_exists(filename, "/mantid_workspace_1")
             await ensure_path_exists(filename, "/mantid_workspace_1/workspace")
-            axis = await h5grove.fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/axis1")
-            data = await h5grove.fastapi_utils.get_data(
+            axis = await h5_fastapi_utils.get_data(file=filename, path="/mantid_workspace_1/workspace/axis1")
+            data = await h5_fastapi_utils.get_data(
                 file=filename, path="/mantid_workspace_1/workspace/values", selection=selection
             )
 
-        data_data = json.loads(data.body.decode())  # type: List[float]
-        axis_data = json.loads(axis.body.decode())  # type: List[float]
+        data_data = typing.cast(list[float], json.loads(data.body.decode()))
+        axis_data = typing.cast(list[float], json.loads(axis.body.decode()))
         return JSONResponse(bucket_and_join_data(axis_data, data_data))
 
     except HTTPException as e:
@@ -305,10 +308,10 @@ async def get_echarts_data(instrument: str, experiment_number: int, filename: st
 
 
 # Helper to raise 404 if a meta request fails
-async def ensure_path_exists(file: str, path: str):
+async def ensure_path_exists(file: str, path: str) -> None:
     try:
-        await h5grove.fastapi_utils.get_meta(file=file, path=path)
-    except h5grove.fastapi_utils.H5GroveException:
+        await h5_fastapi_utils.get_meta(file=file, path=path)
+    except h5_fastapi_utils.H5GroveException:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Path not found: {path}") from None
 
 
