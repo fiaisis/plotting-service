@@ -375,7 +375,7 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
 def _latest_image_in_dir(directory: Path) -> Path | None:
     """Return the newest image file under directory, searching recursively."""
     latest_path: Path | None = None
-    latest_mtime = float("-inf")
+    latest_mtime = 0
     for entry in directory.rglob("*"):
         if entry.is_file() and entry.suffix.lower() in IMAGE_SUFFIXES:
             mtime = entry.stat().st_mtime
