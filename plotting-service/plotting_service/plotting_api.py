@@ -47,7 +47,7 @@ CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 IMAT_DIR: Path = Path(os.getenv("IMAT_DIR", "/imat")).resolve()
 logger.info("Setting IMAT directory to %s", IMAT_DIR)
-IMAGE_SUFFIXES = {".tif", ".tiff", ".fits"}
+IMAGE_SUFFIXES = {".tif", ".tiff"}
 settings.base_dir = Path(CEPH_DIR).resolve()
 DEV_MODE = os.environ.get("DEV_MODE", "False").lower() == "true"
 if DEV_MODE:
