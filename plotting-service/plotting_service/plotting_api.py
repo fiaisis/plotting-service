@@ -202,7 +202,7 @@ async def get_processed_data(instrument: str, experiment_number: int, filename: 
 
 
 @app.get("/echarts_meta/{instrument}/{experiment_number}")
-async def get_echarts_metadata(instrument: str, experiment_number: int, filename: str) -> Metadata:
+async def get_echarts_metadata(instrument: str, experiment_number: int, filename: str, path: str) -> Metadata:
     filename = (
         CEPH_DIR
         + "/"
