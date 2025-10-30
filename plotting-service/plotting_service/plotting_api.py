@@ -14,6 +14,7 @@ from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from model import Metadata
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, PlainTextResponse
@@ -27,8 +28,6 @@ from plotting_service.utils import (
     find_file_user_number,
     request_path_check,
 )
-
-from model import Metadata
 
 h5_fastapi_utils = typing.cast("typing.Any", importlib.import_module("h5grove.fastapi_utils"))
 router = h5_fastapi_utils.router
