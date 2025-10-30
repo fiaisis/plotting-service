@@ -14,7 +14,7 @@ from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from model import Metadata
+from plotting_service.model import Metadata
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, PlainTextResponse
