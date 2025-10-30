@@ -202,7 +202,7 @@ async def get_processed_data(instrument: str, experiment_number: int, filename: 
 
 
 @app.get("/echarts_meta/{instrument}/{experiment_number}")
-async def get_echarts_metadata(instrument: str, experiment_number: int, filename: str, path: str):
+async def get_echarts_metadata(instrument: str, experiment_number: int, filename: str, path: str) -> Metadata:
     filename = (
         CEPH_DIR
         + "/"
@@ -256,7 +256,7 @@ async def get_echarts_metadata(instrument: str, experiment_number: int, filename
             return Metadata(
                 filename=filename,
                 shape=len(json.loads(values_meta.body)["shape"]),
-                axes_labels=[atr_axis1_data["units"], atr_axis2_data["units"]],
+                axes_labels={"axes": atr_axis1_data["units"] + ":" + atr_axis2_data["units"]},
                 x_axis_min=stat_axis1_data["min"],
                 x_axis_max=stat_axis1_data["max"],
                 y_axis_min=stat_axis2_data["min"],
