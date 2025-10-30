@@ -20,7 +20,6 @@ from starlette.responses import FileResponse, JSONResponse, PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
-from plotting_service.model import Metadata
 from plotting_service.utils import (
     find_experiment_number,
     find_file_experiment_number,
@@ -28,6 +27,8 @@ from plotting_service.utils import (
     find_file_user_number,
     request_path_check,
 )
+
+from model import Metadata
 
 h5_fastapi_utils = typing.cast("typing.Any", importlib.import_module("h5grove.fastapi_utils"))
 router = h5_fastapi_utils.router
