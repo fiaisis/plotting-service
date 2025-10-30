@@ -20,7 +20,6 @@ from starlette.responses import FileResponse, JSONResponse, PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
-from plotting_service.model import Metadata
 from plotting_service.utils import (
     find_experiment_number,
     find_file_experiment_number,
@@ -28,6 +27,8 @@ from plotting_service.utils import (
     find_file_user_number,
     request_path_check,
 )
+
+from model import Metadata
 
 h5_fastapi_utils = typing.cast("typing.Any", importlib.import_module("h5grove.fastapi_utils"))
 router = h5_fastapi_utils.router
@@ -202,7 +203,7 @@ async def get_processed_data(instrument: str, experiment_number: int, filename: 
 
 
 @app.get("/echarts_meta/{instrument}/{experiment_number}")
-async def get_echarts_metadata(instrument: str, experiment_number: int, filename: str) -> Metadata:
+async def get_echarts_metadata(instrument: str, experiment_number: int, filename: str, path: str):
     filename = (
         CEPH_DIR
         + "/"
@@ -220,8 +221,21 @@ async def get_echarts_metadata(instrument: str, experiment_number: int, filename
         await ensure_path_exists(filename, "/")
         try:
             await ensure_path_exists(filename, "/ws_out")
-            await ensure_path_exists(filename, "/ws_out/data")
-            values_meta = await h5_fastapi_utils.get_meta(file=filename, path="/ws_out/data/data")
+            axes_names = await h5_fastapi_utils.get_attr(file=filename, path="ws_out/data/data", attr_keys=["axes"])
+            shape = await h5_fastapi_utils.get_meta(file=filename, path="ws_out/data/data")
+            max_axis_x = await h5_fastapi_utils.get_stats(file=filename, path="ws_out/data/energy")
+            min_axis_x = await h5_fastapi_utils.get_stats(file=filename, path="ws_out/data/energy")
+            max_axis_y = await h5_fastapi_utils.get_stats(file=filename, path="ws_out/data/polar")
+            min_axis_y = await h5_fastapi_utils.get_stats(file=filename, path="ws_out/data/polar")
+            return Metadata(
+                filename=filename,
+                shape=len(json.loads(shape.body)["shape"]),
+                axes_labels=json.loads(axes_names.body),
+                x_axis_min=json.loads(min_axis_x.body)["min"],
+                x_axis_max=json.loads(max_axis_x.body)["max"],
+                y_axis_min=json.loads(min_axis_y.body)["min"],
+                y_axis_max=json.loads(max_axis_y.body)["max"],
+            )
         except HTTPException:
             await ensure_path_exists(filename, "/mantid_workspace_1")
             await ensure_path_exists(filename, "/mantid_workspace_1/workspace")
@@ -235,22 +249,20 @@ async def get_echarts_metadata(instrument: str, experiment_number: int, filename
             stat_axis1 = await h5_fastapi_utils.get_stats(file=filename, path="/mantid_workspace_1/workspace/axis1")
             stat_axis2 = await h5_fastapi_utils.get_stats(file=filename, path="/mantid_workspace_1/workspace/axis2")
 
-        meta_data = json.loads(values_meta.body.decode())
-        atr_axis1_data = json.loads(atr_axis1.body.decode())
-        atr_axis2_data = json.loads(atr_axis2.body.decode())
-        stat_axis1_data = json.loads(stat_axis1.body.decode())
-        stat_axis2_data = json.loads(stat_axis2.body.decode())
+            atr_axis1_data = json.loads(atr_axis1.body.decode())
+            atr_axis2_data = json.loads(atr_axis2.body.decode())
+            stat_axis1_data = json.loads(stat_axis1.body.decode())
+            stat_axis2_data = json.loads(stat_axis2.body.decode())
 
-        return Metadata(
-            filename=filename,
-            shape=len(meta_data["shape"]),
-            x_axis_label=atr_axis1_data["units"],
-            y_axis_label=atr_axis2_data["units"],
-            x_axis_min=stat_axis1_data["min"],
-            x_axis_max=stat_axis1_data["max"],
-            y_axis_min=stat_axis2_data["min"],
-            y_axis_max=stat_axis2_data["max"],
-        )
+            return Metadata(
+                filename=filename,
+                shape=len(json.loads(values_meta.body)["shape"]),
+                axes_labels=[atr_axis1_data["units"], atr_axis2_data["units"]],
+                x_axis_min=stat_axis1_data["min"],
+                x_axis_max=stat_axis1_data["max"],
+                y_axis_min=stat_axis2_data["min"],
+                y_axis_max=stat_axis2_data["max"],
+            )
 
     except HTTPException as e:
         raise e
