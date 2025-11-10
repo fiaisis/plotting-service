@@ -395,11 +395,8 @@ async def get_latest_imat_image(
 ) -> StreamingResponse:
     """Return the newest image from any RB folder within the IMAT directory."""
     # Find RB* folders
-    try:
-        rb_dirs = [d for d in IMAT_DIR.iterdir() if d.is_dir() and re.fullmatch(r"RB\d+", d.name)]
-    except OSError as exc:
-        logger.error("Unable to read IMAT directory %s", IMAT_DIR, exc_info=exc)
-        raise HTTPException(HTTPStatus.SERVICE_UNAVAILABLE, "IMAT directory is unavailable") from exc
+    rb_dirs = [d for d in IMAT_DIR.iterdir() if d.is_dir() and re.fullmatch(r"RB\d+", d.name)]
+
     if not rb_dirs:
         raise HTTPException(HTTPStatus.NOT_FOUND, "No RB folders under IMAT_DIR")
 
