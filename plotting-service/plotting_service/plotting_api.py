@@ -387,6 +387,32 @@ def _latest_image_in_dir(directory: Path) -> Path | None:
     return latest_path
 
 
+def _convert_image_to_png(image_path: Path, downsample_factor: int) -> tuple[BytesIO, int, int, int, int, int, int]:
+    """Convert image_path to a PNG stream and optionally downsample it."""
+    with Image.open(image_path) as image:
+        original_width, original_height = image.size
+        converted = image.convert("RGBA")
+
+        if downsample_factor > 1:
+            target_width = max(1, round(original_width / downsample_factor))
+            target_height = max(1, round(original_height / downsample_factor))
+            converted = converted.resize((target_width, target_height), Image.Resampling.LANCZOS)
+
+        sampled_width, sampled_height = converted.size
+        luminance_image = converted.convert("L")
+        extrema = luminance_image.getextrema()
+
+        if extrema is None:
+            raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to compute IMAT image range")
+
+        min_value, max_value = extrema
+        buffer = BytesIO()
+        converted.save(buffer, format="PNG")
+        buffer.seek(0)
+
+    return buffer, original_width, original_height, sampled_width, sampled_height, min_value, max_value
+
+
 @app.get("/imat/latest-image", summary="Fetch the latest IMAT image")
 async def get_latest_imat_image(
     downsample_factor: int = Query(
@@ -419,28 +445,16 @@ async def get_latest_imat_image(
     if latest_path is None:
         raise HTTPException(HTTPStatus.NOT_FOUND, "No images found in IMAT_DIR")
 
-    # Open and convert the image to PNG, downsampling if requested
     try:
-        with Image.open(latest_path) as image:
-            original_width, original_height = image.size
-            converted = image.convert("RGBA")
-
-            if downsample_factor > 1:
-                target_width = max(1, round(original_width / downsample_factor))
-                target_height = max(1, round(original_height / downsample_factor))
-                converted = converted.resize((target_width, target_height), Image.Resampling.LANCZOS)
-
-            sampled_width, sampled_height = converted.size
-            luminance_image = converted.convert("L")
-            extrema = luminance_image.getextrema()
-
-            if extrema is None:
-                raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to compute IMAT image range")
-
-            min_value, max_value = extrema
-            buffer = BytesIO()
-            converted.save(buffer, format="PNG")
-            buffer.seek(0)
+        (
+            buffer,
+            original_width,
+            original_height,
+            sampled_width,
+            sampled_height,
+            min_value,
+            max_value,
+        ) = _convert_image_to_png(latest_path, downsample_factor)
 
     except Exception as exc:
         logger.error("Failed to convert IMAT image at %s", latest_path, exc_info=exc)
