@@ -1,12 +1,14 @@
 import os
 from collections.abc import Iterator
+from io import BytesIO
 from typing import Any
 from unittest import mock
 
 import pytest
 from fastapi.exceptions import HTTPException
+from PIL import Image
 
-from plotting_service.plotting_api import check_permissions
+from plotting_service.plotting_api import _convert_image_to_png, check_permissions
 
 USER_TOKEN = (
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"  # noqa: S105
@@ -108,3 +110,58 @@ async def test_check_permissions_token_failed_bad_token():
         await check_permissions(request, call_next)
 
     call_next.assert_not_called()
+
+
+def test_convert_image_to_png_returns_png_and_metadata(tmp_path):
+    """
+    Ensure images convert to PNG without altering size or luminance range when
+    no downsampling occurs.
+    """
+    image_path = tmp_path / "sample_image.tiff"
+    image = Image.new("L", (10, 20), color=128)
+    image.save(image_path, format="TIFF")
+    image.close()
+
+    buffer, orig_w, orig_h, sampled_w, sampled_h, min_val, max_val = _convert_image_to_png(image_path, 1)
+
+    assert (orig_w, orig_h) == (10, 20)
+    assert (sampled_w, sampled_h) == (10, 20)
+
+    converted = Image.open(BytesIO(buffer.getvalue()))
+    luminance = converted.convert("L")
+    extrema = luminance.getextrema()
+
+    assert extrema == (128, 128)
+    assert (min_val, max_val) == extrema
+    assert converted.format == "PNG"
+    assert converted.mode == "RGBA"
+    assert converted.size == (10, 20)
+    converted.close()
+
+
+def test_convert_image_to_png_downsamples(tmp_path):
+    """
+    Verify the helper downsamples dimensions and reports updated metadata
+    correctly.
+    """
+    image_path = tmp_path / "sample_downsample_image.tiff"
+    image = Image.new("L", (16, 8))
+    for x in range(16):
+        for y in range(8):
+            image.putpixel((x, y), min(255, x * 16 + y * 8))
+    image.save(image_path, format="TIFF")
+    image.close()
+
+    buffer, orig_w, orig_h, sampled_w, sampled_h, min_val, max_val = _convert_image_to_png(image_path, 4)
+
+    assert (orig_w, orig_h) == (16, 8)
+    assert (sampled_w, sampled_h) == (4, 2)
+
+    converted = Image.open(BytesIO(buffer.getvalue()))
+    assert converted.size == (4, 2)
+
+    luminance = converted.convert("L")
+    extrema = luminance.getextrema()
+    assert extrema is not None
+    assert (min_val, max_val) == extrema
+    converted.close()
