@@ -171,6 +171,9 @@ def test_convert_image_to_png_downsamples(tmp_path):
 
 
 def test_get_latest_imat_image_e2e_downsamples_and_sets_headers(tmp_path, monkeypatch):
+    """
+    End-to-end test of the /imat/latest-image endpoint, verifying downsampling.
+    """
     # Point the IMAT directory at an isolated temp dir with a single RB folder
     monkeypatch.setattr(plotting_api, "IMAT_DIR", tmp_path)
     rb_dir = tmp_path / "RB1234"
