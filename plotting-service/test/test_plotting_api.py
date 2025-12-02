@@ -1,13 +1,16 @@
 import os
 from collections.abc import Iterator
+from http import HTTPStatus
 from io import BytesIO
 from typing import Any
 from unittest import mock
 
 import pytest
 from fastapi.exceptions import HTTPException
+from fastapi.testclient import TestClient
 from PIL import Image
 
+from plotting_service import plotting_api
 from plotting_service.plotting_api import _convert_image_to_png, check_permissions
 
 USER_TOKEN = (
@@ -165,3 +168,45 @@ def test_convert_image_to_png_downsamples(tmp_path):
     assert extrema is not None
     assert (min_val, max_val) == extrema
     converted.close()
+
+
+def test_get_latest_imat_image_e2e_downsamples_and_sets_headers(tmp_path, monkeypatch):
+    # Point the IMAT directory at an isolated temp dir with a single RB folder
+    monkeypatch.setattr(plotting_api, "IMAT_DIR", tmp_path)
+    rb_dir = tmp_path / "RB1234"
+    rb_dir.mkdir()
+
+    # Build a tiny RGB TIFF with deterministic pixel values
+    image_path = rb_dir / "imat_sample.tiff"
+    image = Image.new("RGB", (8, 4))
+    for x in range(image.width):
+        for y in range(image.height):
+            image.putpixel((x, y), (x * 20 % 256, y * 40 % 256, (x + y) * 15 % 256))
+    image.save(image_path, format="TIFF")
+    image.close()
+
+    with Image.open(image_path) as original:
+        expected = original.convert("RGBA").resize((4, 2), Image.Resampling.LANCZOS)
+    expected_pixels = list(expected.getdata())
+    expected_luminance_image = expected.convert("L")
+    expected_luminance = expected_luminance_image.getextrema()
+    expected_luminance_image.close()
+    expected.close()
+
+    # Call the endpoint and verify headers and the downsampled PNG
+    client = TestClient(plotting_api.app)
+    response = client.get(
+        "/imat/latest-image", params={"downsample_factor": 2}, headers={"Authorization": "Bearer foo"}
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.headers["X-Original-Width"] == "8"
+    assert response.headers["X-Original-Height"] == "4"
+    assert response.headers["X-Sampled-Width"] == "4"
+    assert response.headers["X-Sampled-Height"] == "2"
+    assert response.headers["X-Downsample-Factor"] == "2"
+    assert response.headers["X-Min-Value"] == str(expected_luminance[0])
+    assert response.headers["X-Max-Value"] == str(expected_luminance[1])
+
+    with Image.open(BytesIO(response.content)) as returned:
+        assert returned.size == (4, 2)
+        assert list(returned.getdata()) == expected_pixels
