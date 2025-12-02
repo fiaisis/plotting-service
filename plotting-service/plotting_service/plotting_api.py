@@ -394,13 +394,16 @@ def _convert_image_to_png(image_path: Path, downsample_factor: int) -> tuple[Byt
         converted = image.convert("RGBA")
 
         if downsample_factor > 1:
+            # Reduce resolution while keeping at least 1x1 output
             target_width = max(1, round(original_width / downsample_factor))
             target_height = max(1, round(original_height / downsample_factor))
-            converted = converted.resize((target_width, target_height), Image.Resampling.LANCZOS)
+            converted = converted.resize(
+                (target_width, target_height), Image.Resampling.LANCZOS
+            )  # Lanczos gives higher-quality downsampling
 
         sampled_width, sampled_height = converted.size
-        luminance_image = converted.convert("L")
-        extrema = luminance_image.getextrema()
+        luminance_image = converted.convert("L")  # Use luminance to compute intensity bounds for headers
+        extrema = luminance_image.getextrema()  # (min, max) luminance values in the 0-255 range
 
         if extrema is None:
             raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to compute IMAT image range")
@@ -420,7 +423,7 @@ async def get_latest_imat_image(
     ),
 ) -> StreamingResponse:
     """Return the newest image from any RB folder within the IMAT directory."""
-    # Find RB* folders
+    # Find RB* folders under the IMAT root
     rb_dirs = [d for d in IMAT_DIR.iterdir() if d.is_dir() and re.fullmatch(r"RB\d+", d.name)]
 
     if not rb_dirs:
@@ -437,7 +440,7 @@ async def get_latest_imat_image(
 
         rb_mtime = rb_latest.stat().st_mtime
 
-        # Keep track of the most recent image seen so far across all RB folders
+        # Track the single most recent image across all RB folders
         if rb_mtime > latest_mtime:
             latest_path = rb_latest
             latest_mtime = rb_mtime
@@ -462,6 +465,7 @@ async def get_latest_imat_image(
 
     effective_downsample = original_width / sampled_width if sampled_width else 1
 
+    # Return the PNG with metadata headers (X- prefixed custom headers)
     return StreamingResponse(
         buffer,
         media_type="image/png",
