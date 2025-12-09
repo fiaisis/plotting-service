@@ -170,16 +170,18 @@ def test_convert_image_to_png_downsamples(tmp_path):
     converted.close()
 
 
-def test_get_latest_imat_image_e2e_downsamples_and_sets_headers(tmp_path, monkeypatch):
+def test_get_latest_imat_image_with_mock_rb_folder(tmp_path, monkeypatch):
     """
-    End-to-end test of the /imat/latest-image endpoint, verifying downsampling.
+    End-to-end test of the /imat/latest-image endpoint which creates a sample RB
+    folder with a TIFF image, then calls the endpoint to retrieve a downsampled
+    PNG and verifies the returned image and headers.
     """
     # Point the IMAT directory at an isolated temp dir with a single RB folder
     monkeypatch.setattr(plotting_api, "IMAT_DIR", tmp_path)
     rb_dir = tmp_path / "RB1234"
     rb_dir.mkdir()
 
-    # Build a tiny RGB TIFF with deterministic pixel values
+    # Build a tiny RGB 8-by-4 pixel TIFF
     image_path = rb_dir / "imat_sample.tiff"
     image = Image.new("RGB", (8, 4))
     for x in range(image.width):

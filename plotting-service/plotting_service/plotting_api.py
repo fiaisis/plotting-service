@@ -388,7 +388,12 @@ def _latest_image_in_dir(directory: Path) -> Path | None:
 
 
 def _convert_image_to_png(image_path: Path, downsample_factor: int) -> tuple[BytesIO, int, int, int, int, int, int]:
-    """Convert image_path to a PNG stream and optionally downsample it."""
+    """
+    Convert image_path to a PNG stream using single-channel L (luminance) mode
+    so extrema are computed over a consistent grayscale representation and
+    min/max values (0-255) populate the response headers. Then optionally
+    downsample the image and return metadata headers.
+    """
     with Image.open(image_path) as image:
         original_width, original_height = image.size
         converted = image.convert("RGBA")
