@@ -5,18 +5,19 @@ Main module
 import importlib
 import json
 import logging
-import mimetypes
 import os
 import re
 import sys
 import typing
 from http import HTTPStatus
+from io import BytesIO
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
+from PIL import Image
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import FileResponse, JSONResponse, PlainTextResponse
+from starlette.responses import JSONResponse, PlainTextResponse, StreamingResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
@@ -45,10 +46,12 @@ logger.info("Starting Plotting Service")
 ALLOWED_ORIGINS = ["*"]
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
+settings.base_dir = Path(CEPH_DIR).resolve()
+
 IMAT_DIR: Path = Path(os.getenv("IMAT_DIR", "/imat")).resolve()
 logger.info("Setting IMAT directory to %s", IMAT_DIR)
 IMAGE_SUFFIXES = {".tif", ".tiff"}
-settings.base_dir = Path(CEPH_DIR).resolve()
+
 DEV_MODE = os.environ.get("DEV_MODE", "False").lower() == "true"
 if DEV_MODE:
     logger.info("Development only mode")
@@ -384,35 +387,76 @@ def _latest_image_in_dir(directory: Path) -> Path | None:
     """Return the newest image file under directory, searching recursively."""
     latest_path: Path | None = None
     latest_mtime: float = 0.0
+
     for entry in directory.rglob("*"):
         if entry.is_file() and entry.suffix.lower() in IMAGE_SUFFIXES:
             mtime = entry.stat().st_mtime
             if mtime > latest_mtime:
                 latest_path = entry
                 latest_mtime = mtime
+
     return latest_path
 
 
-@app.get(
-    "/imat/latest-image",
-    summary="Fetch the latest IMAT image",
-)
-async def get_latest_imat_image() -> FileResponse:
+def _convert_image_to_png(image_path: Path, downsample_factor: int) -> tuple[BytesIO, int, int, int, int, int, int]:
+    """
+    Convert image_path to a PNG stream using single-channel L (luminance) mode
+    so extrema are computed over a consistent grayscale representation and
+    min/max values (0-255) populate the response headers. Then optionally
+    downsample the image and return metadata headers.
+    """
+    with Image.open(image_path) as image:
+        original_width, original_height = image.size
+        converted = image.convert("RGBA")
+
+        if downsample_factor > 1:
+            # Reduce resolution while keeping at least 1x1 output
+            target_width = max(1, round(original_width / downsample_factor))
+            target_height = max(1, round(original_height / downsample_factor))
+            converted = converted.resize(
+                (target_width, target_height), Image.Resampling.LANCZOS
+            )  # Lanczos gives higher-quality downsampling
+
+        sampled_width, sampled_height = converted.size
+        luminance_image = converted.convert("L")  # Use luminance to compute intensity bounds for headers
+        extrema = luminance_image.getextrema()  # (min, max) luminance values in the 0-255 range
+
+        if extrema is None:
+            raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to compute IMAT image range")
+
+        min_value, max_value = extrema
+        buffer = BytesIO()
+        converted.save(buffer, format="PNG")
+        buffer.seek(0)
+
+    return buffer, original_width, original_height, sampled_width, sampled_height, min_value, max_value
+
+
+@app.get("/imat/latest-image", summary="Fetch the latest IMAT image")
+async def get_latest_imat_image(
+    downsample_factor: int = Query(
+        default=8, ge=1, le=64, description="Integer factor to reduce each dimension by (1 keeps original resolution)."
+    ),
+) -> StreamingResponse:
     """Return the newest image from any RB folder within the IMAT directory."""
-    # Find RB* directories directly under IMAT root; ignore unrelated folders
+    # Find RB* folders under the IMAT root
     rb_dirs = [d for d in IMAT_DIR.iterdir() if d.is_dir() and re.fullmatch(r"RB\d+", d.name)]
+
     if not rb_dirs:
         raise HTTPException(HTTPStatus.NOT_FOUND, "No RB folders under IMAT_DIR")
 
     latest_path: Path | None = None
     latest_mtime: float = 0.0
 
+    # Find latest image across all RB folders
     for rb_dir in rb_dirs:
         rb_latest = _latest_image_in_dir(rb_dir)
         if rb_latest is None:
             continue
+
         rb_mtime = rb_latest.stat().st_mtime
-        # Keep track of the most recent image seen so far across all RB folders
+
+        # Track the single most recent image across all RB folders
         if rb_mtime > latest_mtime:
             latest_path = rb_latest
             latest_mtime = rb_mtime
@@ -420,15 +464,37 @@ async def get_latest_imat_image() -> FileResponse:
     if latest_path is None:
         raise HTTPException(HTTPStatus.NOT_FOUND, "No images found in IMAT_DIR")
 
-    # Derive an appropriate media type so clients can handle the image correctly
-    media_type, _ = mimetypes.guess_type(str(latest_path))
-    if media_type is None:
-        media_type = "application/octet-stream"
+    try:
+        (
+            buffer,
+            original_width,
+            original_height,
+            sampled_width,
+            sampled_height,
+            min_value,
+            max_value,
+        ) = _convert_image_to_png(latest_path, downsample_factor)
 
-    return FileResponse(
-        latest_path,
-        media_type=media_type,
-        filename=latest_path.name,
+    except Exception as exc:
+        logger.error("Failed to convert IMAT image at %s", latest_path, exc_info=exc)
+        raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to convert IMAT image") from exc
+
+    effective_downsample = original_width / sampled_width if sampled_width else 1
+
+    # Return the PNG with metadata headers (X- prefixed custom headers)
+    return StreamingResponse(
+        buffer,
+        media_type="image/png",
+        headers={
+            "Content-Disposition": f'attachment; filename="{latest_path.with_suffix(".png").name}"',
+            "X-Original-Width": str(original_width),
+            "X-Original-Height": str(original_height),
+            "X-Sampled-Width": str(sampled_width),
+            "X-Sampled-Height": str(sampled_height),
+            "X-Downsample-Factor": f"{effective_downsample:.6f}".rstrip("0").rstrip("."),
+            "X-Min-Value": str(min_value),
+            "X-Max-Value": str(max_value),
+        },
     )
 
 
