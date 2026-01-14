@@ -1,7 +1,6 @@
 import os
 from collections.abc import Iterator
 from http import HTTPStatus
-from io import BytesIO
 from typing import Any
 from unittest import mock
 
@@ -11,7 +10,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from plotting_service import plotting_api
-from plotting_service.plotting_api import _convert_image_to_png, check_permissions
+from plotting_service.plotting_api import _convert_image_to_rgb_array, check_permissions
 
 USER_TOKEN = (
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"  # noqa: S105
@@ -115,38 +114,31 @@ async def test_check_permissions_token_failed_bad_token():
     call_next.assert_not_called()
 
 
-def test_convert_image_to_png_returns_png_and_metadata(tmp_path):
-    """
-    Ensure images convert to PNG without altering size or luminance range when
-    no downsampling occurs.
-    """
+def test_convert_image_to_rgb_array_returns_data_and_metadata(tmp_path):
+    """Ensure images convert to RGB data without altering size when no
+    downsampling occurs."""
     image_path = tmp_path / "sample_image.tiff"
     image = Image.new("L", (10, 20), color=128)
     image.save(image_path, format="TIFF")
     image.close()
 
-    buffer, orig_w, orig_h, sampled_w, sampled_h, min_val, max_val = _convert_image_to_png(image_path, 1)
+    data, orig_w, orig_h, sampled_w, sampled_h = _convert_image_to_rgb_array(image_path, 1)
 
     assert (orig_w, orig_h) == (10, 20)
     assert (sampled_w, sampled_h) == (10, 20)
+    assert len(data) == sampled_w * sampled_h * 3
 
-    converted = Image.open(BytesIO(buffer.getvalue()))
-    luminance = converted.convert("L")
-    extrema = luminance.getextrema()
+    with Image.open(image_path) as original:
+        expected = original.convert("RGB")
+    expected_bytes = list(expected.tobytes())
+    expected.close()
 
-    assert extrema == (128, 128)
-    assert (min_val, max_val) == extrema
-    assert converted.format == "PNG"
-    assert converted.mode == "RGBA"
-    assert converted.size == (10, 20)
-    converted.close()
+    assert data == expected_bytes
 
 
-def test_convert_image_to_png_downsamples(tmp_path):
-    """
-    Verify the helper downsamples dimensions and reports updated metadata
-    correctly.
-    """
+def test_convert_image_to_rgb_array_downsamples(tmp_path):
+    """Verify the helper downsamples dimensions and reports updated metadata
+    correctly."""
     image_path = tmp_path / "sample_downsample_image.tiff"
     image = Image.new("L", (16, 8))
     for x in range(16):
@@ -155,27 +147,24 @@ def test_convert_image_to_png_downsamples(tmp_path):
     image.save(image_path, format="TIFF")
     image.close()
 
-    buffer, orig_w, orig_h, sampled_w, sampled_h, min_val, max_val = _convert_image_to_png(image_path, 4)
+    data, orig_w, orig_h, sampled_w, sampled_h = _convert_image_to_rgb_array(image_path, 4)
 
     assert (orig_w, orig_h) == (16, 8)
     assert (sampled_w, sampled_h) == (4, 2)
+    assert len(data) == sampled_w * sampled_h * 3
 
-    converted = Image.open(BytesIO(buffer.getvalue()))
-    assert converted.size == (4, 2)
+    with Image.open(image_path) as original:
+        expected = original.convert("RGB").resize((4, 2), Image.Resampling.LANCZOS)
+    expected_bytes = list(expected.tobytes())
+    expected.close()
 
-    luminance = converted.convert("L")
-    extrema = luminance.getextrema()
-    assert extrema is not None
-    assert (min_val, max_val) == extrema
-    converted.close()
+    assert data == expected_bytes
 
 
 def test_get_latest_imat_image_with_mock_rb_folder(tmp_path, monkeypatch):
-    """
-    End-to-end test of the /imat/latest-image endpoint which creates a sample RB
-    folder with a TIFF image, then calls the endpoint to retrieve a downsampled
-    PNG and verifies the returned image and headers.
-    """
+    """End-to-end test of the /imat/latest-image endpoint which creates a
+    sample RB folder with a TIFF image, then calls the endpoint to retrieve RGB
+    data and verifies the returned payload."""
     # Point the IMAT directory at an isolated temp dir with a single RB folder
     monkeypatch.setattr(plotting_api, "IMAT_DIR", tmp_path)
     rb_dir = tmp_path / "RB1234"
@@ -191,27 +180,21 @@ def test_get_latest_imat_image_with_mock_rb_folder(tmp_path, monkeypatch):
     image.close()
 
     with Image.open(image_path) as original:
-        expected = original.convert("RGBA").resize((4, 2), Image.Resampling.LANCZOS)
-    expected_pixels = list(expected.getdata())
-    expected_luminance_image = expected.convert("L")
-    expected_luminance = expected_luminance_image.getextrema()
-    expected_luminance_image.close()
+        expected = original.convert("RGB").resize((4, 2), Image.Resampling.LANCZOS)
+    expected_bytes = list(expected.tobytes())
     expected.close()
 
-    # Call the endpoint and verify headers and the downsampled PNG
+    # Call the endpoint and verify the downsampled RGB payload
     client = TestClient(plotting_api.app)
     response = client.get(
         "/imat/latest-image", params={"downsample_factor": 2}, headers={"Authorization": "Bearer foo"}
     )
     assert response.status_code == HTTPStatus.OK
-    assert response.headers["X-Original-Width"] == "8"
-    assert response.headers["X-Original-Height"] == "4"
-    assert response.headers["X-Sampled-Width"] == "4"
-    assert response.headers["X-Sampled-Height"] == "2"
-    assert response.headers["X-Downsample-Factor"] == "2"
-    assert response.headers["X-Min-Value"] == str(expected_luminance[0])
-    assert response.headers["X-Max-Value"] == str(expected_luminance[1])
-
-    with Image.open(BytesIO(response.content)) as returned:
-        assert returned.size == (4, 2)
-        assert list(returned.getdata()) == expected_pixels
+    payload = response.json()
+    assert payload["originalWidth"] == 8  # noqa: PLR2004
+    assert payload["originalHeight"] == 4  # noqa: PLR2004
+    assert payload["sampledWidth"] == 4  # noqa: PLR2004
+    assert payload["sampledHeight"] == 2  # noqa: PLR2004
+    assert payload["shape"] == [2, 4, 3]
+    assert payload["downsampleFactor"] == 2  # noqa: PLR2004
+    assert payload["data"] == expected_bytes
