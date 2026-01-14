@@ -68,7 +68,7 @@ app.add_middleware(
 
 @app.get("/healthz")
 async def get() -> typing.Literal["ok"]:
-    """Health check endpoint \f :return: "ok"."""
+    """Health check endpoint :return: "ok"."""
     try:
         with Path(f"{CEPH_DIR}/GENERIC/autoreduce/healthy_file.txt").open("r") as fle:
             lines = fle.readlines()
