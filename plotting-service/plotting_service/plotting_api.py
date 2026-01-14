@@ -329,7 +329,7 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     """Middleware that checks the requestee token has permissions for that
     experiment
     :param request: The request to check
-    :param call_next: The next
+    :param call_next: The next call (the route function called)
     call (the route function called)
     :return: A response.
     """
