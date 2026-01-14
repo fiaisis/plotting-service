@@ -1,6 +1,4 @@
-"""
-Main module
-"""
+"""Main module."""
 
 import importlib
 import json
@@ -10,14 +8,13 @@ import re
 import sys
 import typing
 from http import HTTPStatus
-from io import BytesIO
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
 from PIL import Image
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, PlainTextResponse, StreamingResponse
+from starlette.responses import JSONResponse, PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
@@ -71,11 +68,7 @@ app.add_middleware(
 
 @app.get("/healthz")
 async def get() -> typing.Literal["ok"]:
-    """
-    Health check endpoint
-    \f
-    :return: "ok"
-    """
+    """Health check endpoint :return: "ok"."""
     try:
         with Path(f"{CEPH_DIR}/GENERIC/autoreduce/healthy_file.txt").open("r") as fle:
             lines = fle.readlines()
@@ -113,8 +106,9 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
 
 @app.get("/find_file/instrument/{instrument}/experiment_number/{experiment_number}")
 async def find_file_get_instrument(instrument: str, experiment_number: int, filename: str) -> str:
-    """
-    Return the relative path to the env var CEPH_DIR that leads to the requested file if one exists.
+    """Return the relative path to the env var CEPH_DIR that leads to the
+    requested file if one exists.
+
     :param instrument: Instrument the file belongs to.
     :param experiment_number: Experiment number the file belongs to.
     :param filename: Filename to find.
@@ -130,8 +124,9 @@ async def find_file_get_instrument(instrument: str, experiment_number: int, file
 
 @app.get("/find_file/generic/experiment_number/{experiment_number}")
 async def find_file_generic_experiment_number(experiment_number: int, filename: str) -> str:
-    """
-    Return the relative path to the env var CEPH_DIR that leads to the requested file if one exists.
+    """Return the relative path to the env var CEPH_DIR that leads to the
+    requested file if one exists.
+
     :param experiment_number: Experiment number the file belongs to.
     :param filename: Filename to find
     :return: The relative path to the file in the CEPH_DIR env var.
@@ -144,8 +139,9 @@ async def find_file_generic_experiment_number(experiment_number: int, filename: 
 
 @app.get("/find_file/generic/user_number/{user_number}")
 async def find_file_generic_user_number(user_number: int, filename: str) -> str:
-    """
-    Return the relative path to the env var CEPH_DIR that leads to the requested file if one exists.
+    """Return the relative path to the env var CEPH_DIR that leads to the
+    requested file if one exists.
+
     :param user_number: Experiment number the file belongs to.
     :param filename: Filename to find
     :return: The relative path to the file in the CEPH_DIR env var.
@@ -330,11 +326,11 @@ def bucket_and_join_data(axis: list[float], data: list[float]) -> list[list[floa
 
 @app.middleware("http")
 async def check_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:  # noqa: C901, PLR0911
-    """
-    Middleware that checks the requestee token has permissions for that experiment
+    """Middleware that checks the requestee token has permissions for that
+    experiment
     :param request: The request to check
     :param call_next: The next call (the route function called)
-    :return: A response
+    :return: A response.
     """
     if DEV_MODE:
         return await call_next(request)
@@ -398,16 +394,12 @@ def _latest_image_in_dir(directory: Path) -> Path | None:
     return latest_path
 
 
-def _convert_image_to_png(image_path: Path, downsample_factor: int) -> tuple[BytesIO, int, int, int, int, int, int]:
-    """
-    Convert image_path to a PNG stream using single-channel L (luminance) mode
-    so extrema are computed over a consistent grayscale representation and
-    min/max values (0-255) populate the response headers. Then optionally
-    downsample the image and return metadata headers.
-    """
+def _convert_image_to_rgb_array(image_path: Path, downsample_factor: int) -> tuple[list[int], int, int, int, int]:
+    """Convert image into a RGB byte array to be used by frontend H5Web
+    interface."""
     with Image.open(image_path) as image:
         original_width, original_height = image.size
-        converted = image.convert("RGBA")
+        converted = image.convert("RGB")
 
         if downsample_factor > 1:
             # Reduce resolution while keeping at least 1x1 output
@@ -418,18 +410,9 @@ def _convert_image_to_png(image_path: Path, downsample_factor: int) -> tuple[Byt
             )  # Lanczos gives higher-quality downsampling
 
         sampled_width, sampled_height = converted.size
-        luminance_image = converted.convert("L")  # Use luminance to compute intensity bounds for headers
-        extrema = luminance_image.getextrema()  # (min, max) luminance values in the 0-255 range
+        data = list(converted.tobytes())
 
-        if extrema is None:
-            raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to compute IMAT image range")
-
-        min_value, max_value = extrema
-        buffer = BytesIO()
-        converted.save(buffer, format="PNG")
-        buffer.seek(0)
-
-    return buffer, original_width, original_height, sampled_width, sampled_height, min_value, max_value
+    return data, original_width, original_height, sampled_width, sampled_height
 
 
 @app.get("/imat/latest-image", summary="Fetch the latest IMAT image")
@@ -437,8 +420,8 @@ async def get_latest_imat_image(
     downsample_factor: int = Query(
         default=8, ge=1, le=64, description="Integer factor to reduce each dimension by (1 keeps original resolution)."
     ),
-) -> StreamingResponse:
-    """Return the newest image from any RB folder within the IMAT directory."""
+) -> JSONResponse:
+    """Return the latest image from any RB folder within the IMAT directory."""
     # Find RB* folders under the IMAT root
     rb_dirs = [d for d in IMAT_DIR.iterdir() if d.is_dir() and re.fullmatch(r"RB\d+", d.name)]
 
@@ -464,38 +447,28 @@ async def get_latest_imat_image(
     if latest_path is None:
         raise HTTPException(HTTPStatus.NOT_FOUND, "No images found in IMAT_DIR")
 
+    # Convert the image to RGB array
     try:
-        (
-            buffer,
-            original_width,
-            original_height,
-            sampled_width,
-            sampled_height,
-            min_value,
-            max_value,
-        ) = _convert_image_to_png(latest_path, downsample_factor)
-
+        data, original_width, original_height, sampled_width, sampled_height = _convert_image_to_rgb_array(
+            latest_path, downsample_factor
+        )
     except Exception as exc:
         logger.error("Failed to convert IMAT image at %s", latest_path, exc_info=exc)
         raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to convert IMAT image") from exc
 
+    # Calculate effective downsample factor
     effective_downsample = original_width / sampled_width if sampled_width else 1
 
-    # Return the PNG with metadata headers (X- prefixed custom headers)
-    return StreamingResponse(
-        buffer,
-        media_type="image/png",
-        headers={
-            "Content-Disposition": f'attachment; filename="{latest_path.with_suffix(".png").name}"',
-            "X-Original-Width": str(original_width),
-            "X-Original-Height": str(original_height),
-            "X-Sampled-Width": str(sampled_width),
-            "X-Sampled-Height": str(sampled_height),
-            "X-Downsample-Factor": f"{effective_downsample:.6f}".rstrip("0").rstrip("."),
-            "X-Min-Value": str(min_value),
-            "X-Max-Value": str(max_value),
-        },
-    )
+    payload = {
+        "data": data,
+        "shape": [sampled_height, sampled_width, 3],
+        "originalWidth": original_width,
+        "originalHeight": original_height,
+        "sampledWidth": sampled_width,
+        "sampledHeight": sampled_height,
+        "downsampleFactor": effective_downsample,
+    }
+    return JSONResponse(payload)
 
 
 app.include_router(router)
