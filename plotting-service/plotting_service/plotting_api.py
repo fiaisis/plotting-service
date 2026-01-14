@@ -330,7 +330,9 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     experiment 
     :param request: The request to check 
     :param call_next: The next
-    call (the route function called) :return: A response."""
+    call (the route function called) 
+    :return: A response.
+"""
     if DEV_MODE:
         return await call_next(request)
     if request.method == "OPTIONS":
