@@ -327,12 +327,12 @@ def bucket_and_join_data(axis: list[float], data: list[float]) -> list[list[floa
 @app.middleware("http")
 async def check_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:  # noqa: C901, PLR0911
     """Middleware that checks the requestee token has permissions for that
-    experiment 
-    :param request: The request to check 
+    experiment
+    :param request: The request to check
     :param call_next: The next
-    call (the route function called) 
+    call (the route function called)
     :return: A response.
-"""
+    """
     if DEV_MODE:
         return await call_next(request)
     if request.method == "OPTIONS":
