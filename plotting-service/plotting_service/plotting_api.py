@@ -1,7 +1,6 @@
 """Main module."""
 
 import importlib
-import json
 import logging
 import os
 import re
@@ -18,7 +17,6 @@ from starlette.responses import JSONResponse, PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
-from plotting_service.model import Metadata
 from plotting_service.utils import (
     find_experiment_number,
     find_file_experiment_number,
@@ -150,6 +148,7 @@ async def find_file_generic_user_number(user_number: int, filename: str) -> str:
     if path is None:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
     return str(request_path_check(path, base_dir=CEPH_DIR))
+
 
 @app.middleware("http")
 async def check_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:  # noqa: C901, PLR0911
