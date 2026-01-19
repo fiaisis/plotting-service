@@ -150,7 +150,6 @@ async def find_file_generic_user_number(user_number: int, filename: str) -> str:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
     return str(request_path_check(path, base_dir=CEPH_DIR))
 
-
 @app.middleware("http")
 async def check_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:  # noqa: C901, PLR0911
     """Middleware that checks the requestee token has permissions for that
