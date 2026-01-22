@@ -104,7 +104,6 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
         return file.read()
 
 
-
 @app.get("/find_file/instrument/{instrument}/experiment_number/{experiment_number}")
 async def find_file_get_instrument(instrument: str, experiment_number: int, filename: str) -> str:
     """Return the relative path to the env var CEPH_DIR that leads to the
@@ -171,7 +170,6 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     logger.info(f"Checking permissions for {request.url.path}")
 
     auth_header = request.headers.get("Authorization")
-
     if auth_header is not None:
         raise HTTPException(HTTPStatus.UNAUTHORIZED, "Unauthenticated")
 
