@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
-CEPH_DIR = os.environ.get("CEPH_DIR", "/Users/keiran.price/work/plotting-service/plotting-service")
+CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
 
@@ -170,16 +170,12 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
 
     logger.info(f"Checking permissions for {request.url.path}")
 
-    # Get token from Authorization header or query parameter (SSE doesn't support headers)
     auth_header = request.headers.get("Authorization")
-    token_param = request.query_params.get("token")
 
     if auth_header is not None:
-        token = auth_header.split(" ")[1]
-    elif token_param is not None:
-        token = token_param
-    else:
         raise HTTPException(HTTPStatus.UNAUTHORIZED, "Unauthenticated")
+
+    token = auth_header.split(" ")[1]
 
     api_key = os.environ.get("API_KEY", "")
     if token == api_key and api_key != "":
@@ -192,11 +188,6 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     logger.info("Checking role of user")
     if user.role == "staff":
         # Bypass permission check
-        return await call_next(request)
-
-    # Live data endpoints are instrument-scoped, not experiment-scoped
-    # Any authenticated user can access them
-    if request.url.path.startswith("/live-data"):
         return await call_next(request)
 
     # Handle case without experiment number
