@@ -1,6 +1,7 @@
 """Main module."""
 
 import asyncio
+import contextlib
 import importlib
 import logging
 import os
@@ -405,7 +406,8 @@ async def get_live_data_files(instrument: str) -> list[str]:
     live_data_path = Path(CEPH_DIR) / "GENERIC" / "livereduce" / instrument_upper
 
     if not (live_data_path.exists() and live_data_path.is_dir()):
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Live data directory for '{instrument}' not found")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
+                            detail=f"Live data directory for '{instrument}' not found")
 
     files = [f.name for f in live_data_path.iterdir() if f.is_file()]
     return sorted(files)
@@ -420,18 +422,17 @@ def _get_file_snapshot(directory: Path) -> dict[str, float]:
     try:
         for entry in directory.iterdir():
             if entry.is_file():
-                try:
-                    snapshot[entry.name] = entry.stat().st_mtime
-                except OSError:
-                    # File may have been deleted between iterdir and stat
-                    pass
+                # File may have been deleted between iterdir and stat
+
+                contextlib.suppress(OSError)
+                snapshot[entry.name] = entry.stat().st_mtime
     except OSError as e:
         logger.warning(f"Error scanning directory {directory}: {e}")
     return snapshot
 
 
 @live_app.get("/live-data/{instrument}", summary="SSE endpoint for live data file changes")
-async def live_data_sse(instrument: str, poll_interval: int = 2) -> StreamingResponse:
+async def live_data(instrument: str, poll_interval: int = 2) -> StreamingResponse:
     """SSE endpoint that watches the instrument's live data directory and sends events when files change.
 
     Uses polling-based approach for reliable detection on network file systems.
@@ -447,10 +448,12 @@ async def live_data_sse(instrument: str, poll_interval: int = 2) -> StreamingRes
     live_data_dir = Path(CEPH_DIR) / "GENERIC" / "livereduce" / instrument_upper
 
     if not (live_data_dir.exists() and live_data_dir.is_dir()):
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Live data directory for '{instrument}' not found")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
+                            detail=f"Live data directory for '{instrument}' not found")
 
     if live_data_dir is None:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Live data directory for '{instrument}' not found")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
+                            detail=f"Live data directory for '{instrument}' not found")
 
     async def event_generator() -> typing.AsyncGenerator[str, None]:
         """Generate SSE events for file changes using polling."""
@@ -486,7 +489,8 @@ async def live_data_sse(instrument: str, poll_interval: int = 2) -> StreamingRes
                 # Detect modified files (same name, different mtime)
                 for filename in current_files & previous_files:
                     if current_snapshot[filename] != file_snapshot[filename]:
-                        logger.info(f"File modified: {filename} (mtime {file_snapshot[filename]} -> {current_snapshot[filename]})")
+                        logger.info(f"File modified: {filename} "
+                                    f"(mtime {file_snapshot[filename]} -> {current_snapshot[filename]})")
                         yield f'event: file_changed\ndata: {{"file": "{filename}", "change_type": "modified"}}\n\n'
 
                 # Update snapshot for next iteration
