@@ -170,7 +170,7 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     logger.info(f"Checking permissions for {request.url.path}")
 
     auth_header = request.headers.get("Authorization")
-    if auth_header is not None:
+    if auth_header is None:
         raise HTTPException(HTTPStatus.UNAUTHORIZED, "Unauthenticated")
 
     token = auth_header.split(" ")[1]
