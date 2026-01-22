@@ -391,6 +391,15 @@ async def get_live_data_files(instrument: str) -> list[str]:
     :return: List of filenames in the live data directory
     """
 
+    # Validate instrument to prevent path traversal or invalid characters
+    if (
+        ".." in instrument
+        or "/" in instrument
+        or "\\" in instrument
+        or "~" in instrument
+    ):
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
+
     instrument_upper = instrument.upper()
     live_data_path = Path(CEPH_DIR) / "GENERIC" / "livereduce" / instrument_upper
 
@@ -432,6 +441,15 @@ async def live_data(instrument: str, poll_interval: int = 2) -> StreamingRespons
     """
     if poll_interval < 1:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Poll interval must be at least 1 second")
+
+    # Validate instrument to prevent path traversal or invalid characters
+    if (
+        ".." in instrument
+        or "/" in instrument
+        or "\\" in instrument
+        or "~" in instrument
+    ):
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
 
     instrument_upper = instrument.upper()
     live_data_dir = Path(CEPH_DIR) / "GENERIC" / "livereduce" / instrument_upper
