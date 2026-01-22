@@ -10,8 +10,7 @@ dependencies = [
     "h5grove[fastapi]==2.3.0",
     "PyJWT==2.10.1",
     "requests==2.32.4",
-    "Pillow==11.0.0",
-    "watchfiles>=0.24.0"
+    "Pillow==11.0.0"
 ]
 
 [project.urls]
