@@ -10,6 +10,7 @@ from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
+from h5grove.fastapi_utils import router, settings
 from PIL import Image
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
@@ -22,12 +23,11 @@ from plotting_service.utils import (
     find_file_experiment_number,
     find_file_instrument,
     find_file_user_number,
+    get_current_rb_async,
     request_path_check,
 )
 
-h5_fastapi_utils = typing.cast("typing.Any", importlib.import_module("h5grove.fastapi_utils"))
-router = h5_fastapi_utils.router
-settings = h5_fastapi_utils.settings
+
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
-CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
+CEPH_DIR = os.environ.get("CEPH_DIR", "/Users/keiran.price/work/plotting-service/plotting-service")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
 
@@ -100,6 +100,7 @@ async def get_text_file(instrument: str, experiment_number: int, filename: str) 
 
     with path.open("r") as file:
         return file.read()
+
 
 
 @app.get("/find_file/instrument/{instrument}/experiment_number/{experiment_number}")
@@ -296,5 +297,110 @@ async def get_latest_imat_image(
     }
     return JSONResponse(payload)
 
+
+
+# --- Live App Definition ---
+live_app = FastAPI()
+
+@app.get("/live-data-files/{instrument}")
+async def get_live_data_files(instrument: str) -> list[str]:
+    """
+    Return a list of all the live data files for the given instrument.
+    \f
+    :param instrument: Instrument to get the files for.
+    :return: List of all filenames found in base directory and subdirectories
+    """
+    live_data_base_dir = Path(".") # We need to decide where this is will permanently be in cycle
+    all_files = []
+
+    for file_path in live_data_base_dir.glob("*"):
+        if file_path.is_file():
+            all_files.append(str(file_path.relative_to(live_data_base_dir)))
+
+    return all_files
+
+
+# @live_app.middleware("http")
+# async def check_live_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:
+#     """
+#     Middleware for the live app that checks if the user has permission
+#     to view the *current* experiment on the requested instrument.
+#     """
+#     if DEV_MODE:
+#         return await call_next(request)
+#     if request.method == "OPTIONS":
+#         return await call_next(request)
+#     if request.url.path in ("/healthz", "/docs", "/openapi.json"):
+#         return await call_next(request)
+#
+#     logger.info(f"Checking live permissions for {request.url.path}")
+#
+#     auth_header = request.headers.get("Authorization")
+#     if auth_header is None:
+#         raise HTTPException(HTTPStatus.UNAUTHORIZED, "Unauthenticated")
+#
+#     token = auth_header.split(" ")[1]
+#
+#     # API Key check (if applicable globally, otherwise remove/adapt)
+#     api_key = os.environ.get("API_KEY", "")
+#     if token == api_key and api_key != "":
+#         return await call_next(request)
+#
+#     try:
+#         user = get_user_from_token(token)
+#     except AuthError:
+#         raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden") from None
+#
+#     if user.role == "staff":
+#         return await call_next(request)
+#
+#
+#     file_param = request.query_params.get("file")
+#     if not file_param:
+#
+#         logger.warning(f"Request to live app without 'file' param: {request.url}")
+#
+#         if request.url.path == "/": # Root of sub-app
+#              return await call_next(request)
+#         raise HTTPException(HTTPStatus.BAD_REQUEST, "Missing 'file' parameter for live check")
+#
+#     # Assuming structure: INSTRUMENT/RBnumber/...
+#     parts = Path(file_param).parts
+#     if not parts or parts[0] == "/" or parts[0] == ".":
+#          raise HTTPException(HTTPStatus.BAD_REQUEST, "Invalid file path format")
+#
+#     instrument = parts[0]
+#
+#     try:
+#         current_rb = await get_current_rb_async(instrument)
+#     except Exception as e:
+#         logger.error(f"Failed to get current RB for instrument {instrument}: {e}")
+#         # If we can't check 'live' status, fail safe
+#         raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to verify live experiment status")
+#
+#
+#     try:
+#         # It usually comes as just the number from the PV, but handle "RB" prefix just in case
+#         if current_rb.upper().startswith("RB"):
+#             current_rb_int = int(current_rb[2:])
+#         else:
+#             current_rb_int = int(current_rb)
+#     except ValueError:
+#          logger.error(f"Invalid RB number format from PV: {current_rb}")
+#          raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Invalid live experiment data")
+#
+#     logger.info(f"Checking if user {user.user_number} has access to current RB {current_rb_int} on {instrument}")
+#     allowed_experiments = get_experiments_for_user(user)
+#
+#     if current_rb_int in allowed_experiments:
+#         return await call_next(request)
+#
+#     logger.warning(f"User {user.user_number} denied access to live experiment {current_rb_int}")
+#     raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden: You do not have access to the current live experiment")
+
+live_app.include_router(router)
+
+# Mount the live app
+app.mount("/live", live_app)
 
 app.include_router(router)
