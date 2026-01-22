@@ -19,7 +19,6 @@ from starlette.responses import JSONResponse, PlainTextResponse, StreamingRespon
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
-from plotting_service.instruments import get_live_data_dir
 from plotting_service.utils import (
     find_experiment_number,
     find_file_experiment_number,
@@ -314,24 +313,6 @@ async def get_latest_imat_image(
 # --- Live App Definition ---
 live_app = FastAPI()
 
-@app.get("/live-data-files/{instrument}")
-async def get_live_data_files(instrument: str) -> list[str]:
-    """
-    Return a list of all the live data files for the given instrument.
-    \f
-    :param instrument: Instrument to get the files for.
-    :return: List of all filenames found in base directory and subdirectories
-    """
-    live_data_base_dir = Path(".") # We need to decide where this is will permanently be in cycle
-    all_files = []
-
-    for file_path in live_data_base_dir.glob("*"):
-        if file_path.is_file():
-            all_files.append(str(file_path.relative_to(live_data_base_dir)))
-
-    return all_files
-
-
 # @live_app.middleware("http")
 # async def check_live_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:
 #     """
@@ -412,29 +393,22 @@ async def get_live_data_files(instrument: str) -> list[str]:
 
 live_app.include_router(router)
 
-# Mount the live app
-app.mount("/live", live_app)
-
-@app.get("/live-data", summary="List supported instruments for live data")
-async def get_live_data_instruments() -> list[str]:
-    """Return list of instruments that support live data."""
-    return get_supported_instruments()
-
-
-@app.get("/live-data/{instrument}/files", summary="List files in instrument's live data directory")
+@live_app.get("/live-data/{instrument}/files", summary="List files in instrument's live data directory")
 async def get_live_data_files(instrument: str) -> list[str]:
     """Return list of files in the instrument's live data directory.
 
     :param instrument: The instrument name
     :return: List of filenames in the live data directory
     """
-    live_data_dir = get_live_data_dir(instrument, CEPH_DIR)
-    if live_data_dir is None:
+
+    instrument_upper = instrument.upper()
+    live_data_path = Path(CEPH_DIR) / "GENERIC" / "livereduce" / instrument_upper
+
+    if not (live_data_path.exists() and live_data_path.is_dir()):
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Live data directory for '{instrument}' not found")
 
-    files = [f.name for f in live_data_dir.iterdir() if f.is_file()]
+    files = [f.name for f in live_data_path.iterdir() if f.is_file()]
     return sorted(files)
-
 
 def _get_file_snapshot(directory: Path) -> dict[str, float]:
     """Get a snapshot of all files in a directory with their modification times.
@@ -456,7 +430,7 @@ def _get_file_snapshot(directory: Path) -> dict[str, float]:
     return snapshot
 
 
-@app.get("/live-data/{instrument}", summary="SSE endpoint for live data file changes")
+@live_app.get("/live-data/{instrument}", summary="SSE endpoint for live data file changes")
 async def live_data_sse(instrument: str, poll_interval: int = 2) -> StreamingResponse:
     """SSE endpoint that watches the instrument's live data directory and sends events when files change.
 
@@ -469,7 +443,12 @@ async def live_data_sse(instrument: str, poll_interval: int = 2) -> StreamingRes
     if poll_interval < 1:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Poll interval must be at least 1 second")
 
-    live_data_dir = get_live_data_dir(instrument, CEPH_DIR)
+    instrument_upper = instrument.upper()
+    live_data_dir = Path(CEPH_DIR) / "GENERIC" / "livereduce" / instrument_upper
+
+    if not (live_data_dir.exists() and live_data_dir.is_dir()):
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Live data directory for '{instrument}' not found")
+
     if live_data_dir is None:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Live data directory for '{instrument}' not found")
 
@@ -529,5 +508,6 @@ async def live_data_sse(instrument: str, poll_interval: int = 2) -> StreamingRes
         },
     )
 
-
+# Mount the live app
+app.mount("/live", live_app)
 app.include_router(router)
