@@ -246,12 +246,11 @@ async def get_latest_imat_image(
     downsample_factor: typing.Annotated[
         int,
         Query(
-            default=8,
             ge=1,
             le=64,
             description="Integer factor to reduce each dimension by (1 keeps original resolution).",
         ),
-    ],
+    ] = 8,
 ) -> JSONResponse:
     """Return the latest image from any RB folder within the IMAT directory."""
     # Find RB* folders under the IMAT root
