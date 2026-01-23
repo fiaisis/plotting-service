@@ -452,14 +452,12 @@ async def live_data(instrument: str, poll_interval: int = 2, keepalive_interval:
         ".." in instrument
         or "/" in instrument
         or "\\" in instrument
-        or "~" in instrument
-    ):
-        raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
-
-    instrument_upper = instrument.upper()
-    live_data_dir = Path(CEPH_DIR) / "GENERIC" / "livereduce" / instrument_upper
-
-    if not (live_data_dir.exists() and live_data_dir.is_dir()):
+    # Validate instrument to allow only simple identifiers and prevent path traversal
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", instrument):
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN,
+            detail="Invalid instrument name",
+        )
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
                             detail=f"Live data directory for '{instrument}' not found")
 
