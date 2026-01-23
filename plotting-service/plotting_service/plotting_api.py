@@ -243,9 +243,15 @@ def _convert_image_to_rgb_array(image_path: Path, downsample_factor: int) -> tup
 
 @app.get("/imat/latest-image", summary="Fetch the latest IMAT image")
 async def get_latest_imat_image(
-    downsample_factor: int = Query(
-        default=8, ge=1, le=64, description="Integer factor to reduce each dimension by (1 keeps original resolution)."
-    ),
+    downsample_factor: typing.Annotated[
+        int,
+        Query(
+            default=8,
+            ge=1,
+            le=64,
+            description="Integer factor to reduce each dimension by (1 keeps original resolution).",
+        ),
+    ],
 ) -> JSONResponse:
     """Return the latest image from any RB folder within the IMAT directory."""
     # Find RB* folders under the IMAT root

@@ -71,6 +71,7 @@ select = [
     "FLY",   # flynt - prefer f string over .format
     "PERF",  # Perflint - Flag performance antipatterns
     "RUF",   # Ruff specific rules
+    "FAST",  # FastAPI rules
 ]
 ignore = [
     "S101",    # flake8-bandit - Use of assert (all over pytest tests)
