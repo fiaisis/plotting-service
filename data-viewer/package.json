@@ -9,24 +9,24 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@emotion/react": "11.13.3",
-    "@emotion/styled": "11.13.0",
-    "@h5web/app": "^12.0.1",
-    "@mui/material": "6.1.4",
-    "@mui/styled-engine-sc": "6.1.4",
-    "next": "14.2.30",
-    "react": "^18",
-    "react-dom": "^18",
-    "styled-components": "6.1.13"
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
+    "@h5web/app": "^16.0.1",
+    "@mui/material": "7.3.7",
+    "@mui/styled-engine-sc": "7.3.7",
+    "next": "16.1.4",
+    "react": "^19",
+    "react-dom": "^19",
+    "styled-components": "6.3.8"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18",
-    "cypress": "^13.15.0",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.5",
-    "prettier": "^3.3.3",
+    "@types/node": "^25",
+    "@types/react": "^19.2.9",
+    "@types/react-dom": "^19",
+    "cypress": "^15.9.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.4",
+    "prettier": "^3.8.1",
     "typescript": "^5"
   }
 }
