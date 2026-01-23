@@ -166,6 +166,8 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         return await call_next(request)
     if request.url.path in ("/healthz", "/docs"):
         return await call_next(request)
+    if request.url.path.startswith("/live"):
+        return await call_next(request)
 
     logger.info(f"Checking permissions for {request.url.path}")
 
@@ -430,17 +432,20 @@ def _get_file_snapshot(directory: Path) -> dict[str, float]:
 
 
 @live_app.get("/live-data/{instrument}", summary="SSE endpoint for live data file changes")
-async def live_data(instrument: str, poll_interval: int = 2) -> StreamingResponse:
+async def live_data(instrument: str, poll_interval: int = 2, keepalive_interval: int = 30) -> StreamingResponse:
     """SSE endpoint that watches the instrument's live data directory and sends events when files change.
 
     Uses polling-based approach for reliable detection on network file systems.
 
     :param instrument: The instrument name
     :param poll_interval: The interval in seconds between directory polls (default: 2 seconds)
+    :param keepalive_interval: The interval in seconds between keepalive messages (default: 30 seconds)
     :return: StreamingResponse with SSE events
     """
     if poll_interval < 1:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Poll interval must be at least 1 second")
+    if keepalive_interval < 5:
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Keepalive interval must be at least 5 seconds")
 
     # Validate instrument to prevent path traversal or invalid characters
     if (
@@ -472,9 +477,19 @@ async def live_data(instrument: str, poll_interval: int = 2) -> StreamingRespons
         file_snapshot = _get_file_snapshot(live_data_dir)
         logger.info(f"Initial snapshot for {instrument}: {len(file_snapshot)} files")
 
+        # Track time since last keepalive
+        polls_since_keepalive = 0
+        polls_per_keepalive = keepalive_interval // poll_interval
+
         try:
             while True:
                 await asyncio.sleep(poll_interval)
+                polls_since_keepalive += 1
+
+                # Send keepalive to prevent proxy/browser timeouts
+                if polls_since_keepalive >= polls_per_keepalive:
+                    yield ': keepalive\n\n'
+                    polls_since_keepalive = 0
 
                 # Get current state
                 current_snapshot = _get_file_snapshot(live_data_dir)
