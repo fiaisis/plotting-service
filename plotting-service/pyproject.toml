@@ -4,9 +4,9 @@ readme = "README.md"
 version = "0.0.1"
 requires-python = ">= 3.11"
 dependencies = [
-    "fastapi[all]==0.116.1",
-    "pydantic==2.11.7",
-    "uvicorn==0.35.0",
+    "fastapi[all]==0.124.4",
+    "pydantic==2.12.5",
+    "uvicorn==0.38.0",
     "h5grove[fastapi]==2.3.0",
     "PyJWT==2.10.1",
     "requests==2.32.4",
