@@ -72,9 +72,6 @@ def find_file_instrument(ceph_dir: str, instrument: str, experiment_number: int,
     :param filename: name of the file to find
     :return: path to the filename or None
     """
-    # Validate instrument name before using in path
-    validate_instrument_name(instrument)
-
     # Run normal check
     basic_path = Path(ceph_dir) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced/{filename}"
     # Do a check as we are handling user entered data here
@@ -165,9 +162,6 @@ def request_path_check(path: Path | None, base_dir: str) -> Path:
 
 
 async def get_current_rb_async(instrument: str, timeout: float = 5.0) -> str:
-    # Validate instrument name before using in PV string
-    validate_instrument_name(instrument)
-
     pv = f"IN:{instrument.upper()}:DAE:_RBNUMBER"
     ws_url = "wss://ndaextweb4.nd.rl.ac.uk/pvws/pv"
 

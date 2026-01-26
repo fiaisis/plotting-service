@@ -27,7 +27,7 @@ from plotting_service.utils import (
     find_file_user_number,
     get_current_rb_async,
     request_path_check,
-    validate_instrument_name,
+    safe_check_filepath,
 )
 
 
@@ -84,12 +84,17 @@ async def get() -> typing.Literal["ok"]:
 async def get_text_file(instrument: str, experiment_number: int, filename: str) -> str:
     # We don't check experiment number as it is an int and pydantic won't process any non int type and return a 422
     # automatically
-    # Validate instrument name (alphanumeric and dashes only)
-    validate_instrument_name(instrument)
-
-    # Validate filename to prevent path traversal
-    if ".." in filename or "/" in filename or "\\" in filename or "~" in filename:
-        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Invalid filename")
+    if (
+        ".." in instrument
+        or ".." in filename
+        or "/" in instrument
+        or "/" in filename
+        or "\\" in instrument
+        or "\\" in filename
+        or "~" in instrument
+        or "~" in filename
+    ):
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
 
     path = find_file_instrument(CEPH_DIR, instrument, experiment_number, filename)
     if path is None:
@@ -386,11 +391,10 @@ async def get_live_data_files(instrument: str) -> list[str]:
     :param instrument: The instrument name
     :return: List of filenames in the live data directory
     """
-    # Validate instrument name (alphanumeric and dashes only)
-    validate_instrument_name(instrument)
-
     instrument_upper = instrument.upper()
     live_data_path = Path(CEPH_DIR) / "GENERIC" / "livereduce" / instrument_upper
+
+    safe_check_filepath(live_data_path, CEPH_DIR+"/GENERIC/livereduce")
 
     if not (live_data_path.exists() and live_data_path.is_dir()):
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
@@ -434,24 +438,23 @@ async def live_data(instrument: str, poll_interval: int = 2, keepalive_interval:
     if keepalive_interval < 5:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Keepalive interval must be at least 5 seconds")
 
-    # Validate instrument name (alphanumeric and dashes only)
-    validate_instrument_name(instrument)
-
     instrument_upper = instrument.upper()
-    live_data_dir = Path(CEPH_DIR) / "GENERIC" / "livereduce" / instrument_upper
+    live_data_path = Path(CEPH_DIR) / "GENERIC" / "livereduce" / instrument_upper
 
-    if not (live_data_dir.exists() and live_data_dir.is_dir()):
+    safe_check_filepath(live_data_path, CEPH_DIR+"/GENERIC/livereduce")
+
+    if not (live_data_path.exists() and live_data_path.is_dir()):
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
                             detail=f"Live data directory for '{instrument}' not found")
 
     async def event_generator() -> typing.AsyncGenerator[str, None]:
         """Generate SSE events for file changes using polling."""
         # Send initial connected event
-        relative_dir = str(live_data_dir.relative_to(CEPH_DIR))
+        relative_dir = str(live_data_path.relative_to(CEPH_DIR))
         yield f'event: connected\ndata: {{"directory": "{relative_dir}"}}\n\n'
 
         # Build initial snapshot of files and their modification times
-        file_snapshot = _get_file_snapshot(live_data_dir)
+        file_snapshot = _get_file_snapshot(live_data_path)
         logger.info(f"Initial snapshot for {instrument}: {len(file_snapshot)} files")
 
         # Track time since last keepalive
@@ -469,7 +472,7 @@ async def live_data(instrument: str, poll_interval: int = 2, keepalive_interval:
                     polls_since_keepalive = 0
 
                 # Get current state
-                current_snapshot = _get_file_snapshot(live_data_dir)
+                current_snapshot = _get_file_snapshot(live_data_path)
 
                 # Check for changes
                 previous_files = set(file_snapshot.keys())
