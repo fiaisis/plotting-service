@@ -14,6 +14,21 @@ from starlette.requests import Request
 logger = logging.getLogger(__name__)
 
 
+def validate_instrument_name(instrument: str) -> None:
+    """
+    Validate that the instrument name contains only alphanumeric characters and dashes/underscores.
+    Raises HTTPException with 403 Forbidden if the instrument name is invalid.
+
+    :param instrument: The instrument name to validate
+    :raises HTTPException: If the instrument name contains invalid characters
+    """
+    if not re.fullmatch(r"[A-Za-z0-9-_]+", instrument):
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN,
+            detail="Invalid instrument name: must contain only alphanumeric characters, dashes, and underscores",
+        )
+
+
 def safe_check_filepath(filepath: Path, base_path: str) -> None:
     """
     Check to ensure the path does contain the base path and that it does not resolve to some other directory
@@ -57,6 +72,9 @@ def find_file_instrument(ceph_dir: str, instrument: str, experiment_number: int,
     :param filename: name of the file to find
     :return: path to the filename or None
     """
+    # Validate instrument name before using in path
+    validate_instrument_name(instrument)
+
     # Run normal check
     basic_path = Path(ceph_dir) / f"{instrument.upper()}/RBNumber/RB{experiment_number}/autoreduced/{filename}"
     # Do a check as we are handling user entered data here
@@ -147,6 +165,9 @@ def request_path_check(path: Path | None, base_dir: str) -> Path:
 
 
 async def get_current_rb_async(instrument: str, timeout: float = 5.0) -> str:
+    # Validate instrument name before using in PV string
+    validate_instrument_name(instrument)
+
     pv = f"IN:{instrument.upper()}:DAE:_RBNUMBER"
     ws_url = "wss://ndaextweb4.nd.rl.ac.uk/pvws/pv"
 

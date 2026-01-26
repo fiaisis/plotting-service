@@ -27,6 +27,7 @@ from plotting_service.utils import (
     find_file_user_number,
     get_current_rb_async,
     request_path_check,
+    validate_instrument_name,
 )
 
 
@@ -83,17 +84,12 @@ async def get() -> typing.Literal["ok"]:
 async def get_text_file(instrument: str, experiment_number: int, filename: str) -> str:
     # We don't check experiment number as it is an int and pydantic won't process any non int type and return a 422
     # automatically
-    if (
-        ".." in instrument
-        or ".." in filename
-        or "/" in instrument
-        or "/" in filename
-        or "\\" in instrument
-        or "\\" in filename
-        or "~" in instrument
-        or "~" in filename
-    ):
-        raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
+    # Validate instrument name (alphanumeric and dashes only)
+    validate_instrument_name(instrument)
+
+    # Validate filename to prevent path traversal
+    if ".." in filename or "/" in filename or "\\" in filename or "~" in filename:
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Invalid filename")
 
     path = find_file_instrument(CEPH_DIR, instrument, experiment_number, filename)
     if path is None:
@@ -166,6 +162,8 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         return await call_next(request)
     if request.url.path in ("/healthz", "/docs"):
         return await call_next(request)
+    # if the call was to the livedata skip this middleware and use the one for the livedata instead as livedata has
+    # its own permissions middleware
     if request.url.path.startswith("/live"):
         return await call_next(request)
 
@@ -320,7 +318,7 @@ live_app = FastAPI()
 #
 #     logger.info(f"Checking live permissions for {request.url.path}")
 #
-#     auth_header = request.headers.get("Authorization")
+#     auth_header = request.query_params.get("token")
 #     if auth_header is None:
 #         raise HTTPException(HTTPStatus.UNAUTHORIZED, "Unauthenticated")
 #
@@ -392,15 +390,8 @@ async def get_live_data_files(instrument: str) -> list[str]:
     :param instrument: The instrument name
     :return: List of filenames in the live data directory
     """
-
-    # Validate instrument to prevent path traversal or invalid characters
-    if (
-        ".." in instrument
-        or "/" in instrument
-        or "\\" in instrument
-        or "~" in instrument
-    ):
-        raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
+    # Validate instrument name (alphanumeric and dashes only)
+    validate_instrument_name(instrument)
 
     instrument_upper = instrument.upper()
     live_data_path = Path(CEPH_DIR) / "GENERIC" / "livereduce" / instrument_upper
@@ -447,21 +438,13 @@ async def live_data(instrument: str, poll_interval: int = 2, keepalive_interval:
     if keepalive_interval < 5:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Keepalive interval must be at least 5 seconds")
 
-    # Validate instrument to prevent path traversal or invalid characters
-    if (
-        ".." in instrument
-        or "/" in instrument
-        or "\\" in instrument
-    # Validate instrument to allow only simple identifiers and prevent path traversal
-    if not re.fullmatch(r"[A-Za-z0-9_-]+", instrument):
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN,
-            detail="Invalid instrument name",
-        )
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
-                            detail=f"Live data directory for '{instrument}' not found")
+    # Validate instrument name (alphanumeric and dashes only)
+    validate_instrument_name(instrument)
 
-    if live_data_dir is None:
+    instrument_upper = instrument.upper()
+    live_data_dir = Path(CEPH_DIR) / "GENERIC" / "livereduce" / instrument_upper
+
+    if not (live_data_dir.exists() and live_data_dir.is_dir()):
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
                             detail=f"Live data directory for '{instrument}' not found")
 
