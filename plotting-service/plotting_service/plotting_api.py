@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 logger.info("Starting Plotting Service")
 
 ALLOWED_ORIGINS = ["*"]
+KEEP_ALIVE_INTERVAL = 5
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
@@ -360,18 +361,15 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
     except Exception as e:
         logger.error(f"Failed to get current RB for instrument {instrument}: {e}")
         # If we can't check 'live' status, fail safe
-        raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to verify live experiment status")
+        raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to verify live experiment status") from None
 
 
     try:
         # It usually comes as just the number from the PV, but handle "RB" prefix just in case
-        if current_rb.upper().startswith("RB"):
-            current_rb_int = int(current_rb[2:])
-        else:
-            current_rb_int = int(current_rb)
+        current_rb_int = int(current_rb[2:]) if current_rb.upper().startswith("RB") else int(current_rb)
     except ValueError:
          logger.error(f"Invalid RB number format from PV: {current_rb}")
-         raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Invalid live experiment data")
+         raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Invalid live experiment data") from None
 
     logger.info(f"Checking if user {user.user_number} has access to current RB {current_rb_int} on {instrument}")
     allowed_experiments = get_experiments_for_user(user)
@@ -435,7 +433,7 @@ async def live_data(instrument: str, poll_interval: int = 2, keepalive_interval:
     """
     if poll_interval < 1:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Poll interval must be at least 1 second")
-    if keepalive_interval < 5:
+    if keepalive_interval < KEEP_ALIVE_INTERVAL:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Keepalive interval must be at least 5 seconds")
 
     instrument_upper = instrument.upper()
@@ -468,7 +466,7 @@ async def live_data(instrument: str, poll_interval: int = 2, keepalive_interval:
 
                 # Send keepalive to prevent proxy/browser timeouts
                 if polls_since_keepalive >= polls_per_keepalive:
-                    yield ': keepalive\n\n'
+                    yield ": keepalive\n\n"
                     polls_since_keepalive = 0
 
                 # Get current state
