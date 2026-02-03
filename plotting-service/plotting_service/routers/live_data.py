@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 MINIMUM_KEEP_ALIVE_INTERVAL = 5
 
+
 @LiveDataRouter.get("/live-data/{instrument}/files", summary="List files in instrument's live data directory")
 async def get_live_data_files(instrument: str) -> list[str]:
     """Return list of files in the instrument's live data directory.

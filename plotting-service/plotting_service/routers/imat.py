@@ -115,4 +115,3 @@ async def get_latest_imat_image(
         "downsampleFactor": effective_downsample,
     }
     return JSONResponse(payload)
-

@@ -53,6 +53,7 @@ CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
 
+
 @app.middleware("http")
 async def check_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:  # noqa: C901, PLR0911
     """Middleware that checks the requestee token has permissions for that
@@ -106,6 +107,7 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         return await call_next(request)
 
     raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden")
+
 
 @app.middleware("http")
 async def check_live_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:  # noqa: C901, PLR0911, PLR0912

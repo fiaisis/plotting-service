@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 PlottingRouter = APIRouter()
 
+
 async def get_text_file(instrument: str, experiment_number: int, filename: str) -> str:
     # We don't check experiment number as it is an int and pydantic won't process any non int type and return a 422
     # automatically

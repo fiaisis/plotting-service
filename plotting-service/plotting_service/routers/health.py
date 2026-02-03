@@ -9,6 +9,7 @@ CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 
 HealthRouter = APIRouter()
 
+
 @HealthRouter.get("/healthz")
 async def get() -> typing.Literal["ok"]:
     """Health check endpoint :return: "ok"."""
