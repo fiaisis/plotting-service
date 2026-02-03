@@ -10,7 +10,9 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from plotting_service import plotting_api
-from plotting_service.plotting_api import _convert_image_to_rgb_array, check_permissions
+from plotting_service.plotting_api import check_permissions
+from plotting_service.routers import imat
+from plotting_service.routers.imat import _convert_image_to_rgb_array
 
 USER_TOKEN = (
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"  # noqa: S105
@@ -170,7 +172,7 @@ def test_get_latest_imat_image_with_mock_rb_folder(tmp_path, monkeypatch):
     sample RB folder with a TIFF image, then calls the endpoint to retrieve RGB
     data and verifies the returned payload."""
     # Point the IMAT directory at an isolated temp dir with a single RB folder
-    monkeypatch.setattr(plotting_api, "IMAT_DIR", tmp_path)
+    monkeypatch.setattr(imat, "IMAT_DIR", tmp_path)
     rb_dir = tmp_path / "RB1234"
     rb_dir.mkdir()
 
