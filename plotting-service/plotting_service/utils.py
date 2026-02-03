@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import re
-import time
 from contextlib import suppress
 from http import HTTPStatus
 from pathlib import Path
@@ -187,6 +186,3 @@ def get_current_rb_for_instrument(instrument: str) -> str:
     :return: RB number of the current ISIS run
     """
     return asyncio.run(get_current_rb_async(instrument))
-
-
-

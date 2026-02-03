@@ -2,7 +2,6 @@
 
 import asyncio
 import contextlib
-import importlib
 import logging
 import os
 import re
@@ -29,8 +28,6 @@ from plotting_service.utils import (
     request_path_check,
     safe_check_filepath,
 )
-
-
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
@@ -301,9 +298,9 @@ async def get_latest_imat_image(
     return JSONResponse(payload)
 
 
-
 # --- Live App Definition ---
 live_app = FastAPI()
+
 
 @live_app.middleware("http")
 async def check_live_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:  # noqa: C901, PLR0911, PLR0912
@@ -339,20 +336,18 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
     if user.role == "staff":
         return await call_next(request)
 
-
     file_param = request.query_params.get("file")
     if not file_param:
-
         logger.warning(f"Request to live app without 'file' param: {request.url}")
 
-        if request.url.path == "/": # Root of sub-app
-             return await call_next(request)
+        if request.url.path == "/":  # Root of sub-app
+            return await call_next(request)
         raise HTTPException(HTTPStatus.BAD_REQUEST, "Missing 'file' parameter for live check")
 
     # Assuming structure: INSTRUMENT/RBnumber/...
     parts = Path(file_param).parts
     if not parts or parts[0] == "/" or parts[0] == ".":
-         raise HTTPException(HTTPStatus.BAD_REQUEST, "Invalid file path format")
+        raise HTTPException(HTTPStatus.BAD_REQUEST, "Invalid file path format")
 
     instrument = parts[0]
 
@@ -363,13 +358,12 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
         # If we can't check 'live' status, fail safe
         raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to verify live experiment status") from None
 
-
     try:
         # It usually comes as just the number from the PV, but handle "RB" prefix just in case
         current_rb_int = int(current_rb[2:]) if current_rb.upper().startswith("RB") else int(current_rb)
     except ValueError:
-         logger.error(f"Invalid RB number format from PV: {current_rb}")
-         raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Invalid live experiment data") from None
+        logger.error(f"Invalid RB number format from PV: {current_rb}")
+        raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Invalid live experiment data") from None
 
     logger.info(f"Checking if user {user.user_number} has access to current RB {current_rb_int} on {instrument}")
     allowed_experiments = get_experiments_for_user(user)
@@ -380,7 +374,9 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
     logger.warning(f"User {user.user_number} denied access to live experiment {current_rb_int}")
     raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden: You do not have access to the current live experiment")
 
+
 live_app.include_router(router)
+
 
 @live_app.get("/live-data/{instrument}/files", summary="List files in instrument's live data directory")
 async def get_live_data_files(instrument: str) -> list[str]:
@@ -393,6 +389,7 @@ async def get_live_data_files(instrument: str) -> list[str]:
 
     files = [f.name for f in live_data_path.iterdir() if f.is_file()]
     return sorted(files)
+
 
 def _get_file_snapshot(directory: Path) -> dict[str, float]:
     """Get a snapshot of all files in a directory with their modification times.
@@ -412,18 +409,21 @@ def _get_file_snapshot(directory: Path) -> dict[str, float]:
         logger.warning(f"Error scanning directory {directory}: {e}")
     return snapshot
 
+
 def _get_live_data_directory(instrument: str) -> Path:
     """Return the path to the instrument's live data directory."""
     instrument_upper = instrument.upper()
     live_data_path = Path(CEPH_DIR) / "GENERIC" / "livereduce" / instrument_upper
 
-    safe_check_filepath(live_data_path, CEPH_DIR+"/GENERIC/livereduce")
+    safe_check_filepath(live_data_path, CEPH_DIR + "/GENERIC/livereduce")
 
     if not (live_data_path.exists() and live_data_path.is_dir()):
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
-                            detail=f"Live data directory for '{instrument}' not found")
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail=f"Live data directory for '{instrument}' not found"
+        )
 
     return live_data_path
+
 
 @live_app.get("/live-data/{instrument}", summary="SSE endpoint for live data file changes")
 async def live_data(instrument: str, poll_interval: int = 2, keepalive_interval: int = 30) -> StreamingResponse:
@@ -453,10 +453,10 @@ async def live_data(instrument: str, poll_interval: int = 2, keepalive_interval:
         },
     )
 
-async def _event_generator(live_data_path: Path,
-                           instrument: str,
-                           keepalive_interval: int = 30,
-                           poll_interval: int = 5) -> typing.AsyncGenerator[str, None]:
+
+async def _event_generator(
+    live_data_path: Path, instrument: str, keepalive_interval: int = 30, poll_interval: int = 5
+) -> typing.AsyncGenerator[str, None]:
     """Generate SSE events for file changes using polling."""
     # Send initial connected event
     relative_dir = str(live_data_path.relative_to(CEPH_DIR))
@@ -500,8 +500,9 @@ async def _event_generator(live_data_path: Path,
             # Detect modified files (same name, different mtime)
             for filename in current_files & previous_files:
                 if current_snapshot[filename] != file_snapshot[filename]:
-                    logger.info(f"File modified: {filename} "
-                                f"(mtime {file_snapshot[filename]} -> {current_snapshot[filename]})")
+                    logger.info(
+                        f"File modified: {filename} (mtime {file_snapshot[filename]} -> {current_snapshot[filename]})"
+                    )
                     yield f'event: file_changed\ndata: {{"file": "{filename}", "change_type": "modified"}}\n\n'
 
             # Update snapshot for next iteration
@@ -512,6 +513,7 @@ async def _event_generator(live_data_path: Path,
     except Exception as e:
         logger.exception(f"Error in SSE event generator for {instrument}")
         yield f'event: error\ndata: {{"error": "{e!s}"}}\n\n'
+
 
 # Mount the live app
 app.mount("/live", live_app)
