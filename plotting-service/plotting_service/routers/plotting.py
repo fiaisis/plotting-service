@@ -4,6 +4,7 @@ import sys
 from http import HTTPStatus
 
 from fastapi import APIRouter, HTTPException
+from starlette.responses import PlainTextResponse
 
 from plotting_service.utils import (
     find_file_experiment_number,
@@ -26,6 +27,9 @@ logger = logging.getLogger(__name__)
 PlottingRouter = APIRouter()
 
 
+@PlottingRouter.get(
+    "/text/instrument/{instrument}/experiment_number/{experiment_number}", response_class=PlainTextResponse
+)
 async def get_text_file(instrument: str, experiment_number: int, filename: str) -> str:
     # We don't check experiment number as it is an int and pydantic won't process any non int type and return a 422
     # automatically

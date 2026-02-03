@@ -127,7 +127,8 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
     token_query = request.query_params.get("token")
     if token_query is None:
         token_query = request.headers.get("Authorization")
-        token_query = token_query.split(" ")[1]
+        if token_query is not None:
+            token_query = token_query.split(" ")[1]
     if token_query is None:
         raise HTTPException(HTTPStatus.UNAUTHORIZED, "Unauthenticated")
 
