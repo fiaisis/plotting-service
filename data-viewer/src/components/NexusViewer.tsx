@@ -7,31 +7,6 @@ import { CircularProgress, Stack } from "@mui/material";
 import { FileQueryUrl } from "@/components/utils/FileQueryUrl";
 import { Fallback } from "@/components/utils/FallbackPage";
 
-// Clear old h5web storage entries once (result of 15.0.0 migration)
-function clearOldH5webStorage() {
-  try {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const clearedVersion = window.localStorage.getItem(
-      "data-viewer:h5web-storage-cleared",
-    );
-    if (clearedVersion === "15") {
-      return;
-    }
-
-    for (const key of Object.keys(window.localStorage)) {
-      if (key.startsWith("h5web:")) {
-        window.localStorage.removeItem(key);
-      }
-    }
-
-    window.localStorage.setItem("data-viewer:h5web-storage-cleared", "15");
-  } catch {}
-}
-
-clearOldH5webStorage();
-
 export default function NexusViewer(props: {
   filename: string;
   apiUrl: string;
