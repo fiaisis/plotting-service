@@ -6,8 +6,12 @@ from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
-from PIL import Image
 from starlette.responses import JSONResponse
+
+from plotting_service.services.image_service import (
+    convert_image_to_rgb_array,
+    find_latest_image_in_directory,
+)
 
 ImatRouter = APIRouter()
 
@@ -21,44 +25,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-
-IMAGE_SUFFIXES = {".tif", ".tiff"}
-
-
-def _latest_image_in_dir(directory: Path) -> Path | None:
-    """Return the newest image file under directory, searching recursively."""
-    latest_path: Path | None = None
-    latest_mtime: float = 0.0
-
-    for entry in directory.rglob("*"):
-        if entry.is_file() and entry.suffix.lower() in IMAGE_SUFFIXES:
-            mtime = entry.stat().st_mtime
-            if mtime > latest_mtime:
-                latest_path = entry
-                latest_mtime = mtime
-
-    return latest_path
-
-
-def _convert_image_to_rgb_array(image_path: Path, downsample_factor: int) -> tuple[list[int], int, int, int, int]:
-    """Convert image into a RGB byte array to be used by frontend H5Web
-    interface."""
-    with Image.open(image_path) as image:
-        original_width, original_height = image.size
-        converted = image.convert("RGB")
-
-        if downsample_factor > 1:
-            # Reduce resolution while keeping at least 1x1 output
-            target_width = max(1, round(original_width / downsample_factor))
-            target_height = max(1, round(original_height / downsample_factor))
-            converted = converted.resize(
-                (target_width, target_height), Image.Resampling.LANCZOS
-            )  # Lanczos gives higher-quality downsampling
-
-        sampled_width, sampled_height = converted.size
-        data = list(converted.tobytes())
-
-    return data, original_width, original_height, sampled_width, sampled_height
 
 
 @ImatRouter.get("/imat/latest-image", summary="Fetch the latest IMAT image")
@@ -79,7 +45,7 @@ async def get_latest_imat_image(
 
     # Find latest image across all RB folders
     for rb_dir in rb_dirs:
-        rb_latest = _latest_image_in_dir(rb_dir)
+        rb_latest = find_latest_image_in_directory(rb_dir)
         if rb_latest is None:
             continue
 
@@ -95,7 +61,7 @@ async def get_latest_imat_image(
 
     # Convert the image to RGB array
     try:
-        data, original_width, original_height, sampled_width, sampled_height = _convert_image_to_rgb_array(
+        data, original_width, original_height, sampled_width, sampled_height = convert_image_to_rgb_array(
             latest_path, downsample_factor
         )
     except Exception as exc:

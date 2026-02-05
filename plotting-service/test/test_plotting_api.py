@@ -12,7 +12,7 @@ from PIL import Image
 from plotting_service import plotting_api
 from plotting_service.plotting_api import check_permissions
 from plotting_service.routers import imat
-from plotting_service.routers.imat import _convert_image_to_rgb_array
+from plotting_service.services.image_service import convert_image_to_rgb_array
 
 USER_TOKEN = (
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"  # noqa: S105
@@ -120,7 +120,7 @@ async def test_check_permissions_token_failed_bad_token():
     call_next.assert_not_called()
 
 
-def test_convert_image_to_rgb_array_returns_data_and_metadata(tmp_path):
+def testconvert_image_to_rgb_array_returns_data_and_metadata(tmp_path):
     """Ensure images convert to RGB data without altering size when no
     downsampling occurs."""
     image_path = tmp_path / "sample_image.tiff"
@@ -128,7 +128,7 @@ def test_convert_image_to_rgb_array_returns_data_and_metadata(tmp_path):
     image.save(image_path, format="TIFF")
     image.close()
 
-    data, orig_w, orig_h, sampled_w, sampled_h = _convert_image_to_rgb_array(image_path, 1)
+    data, orig_w, orig_h, sampled_w, sampled_h = convert_image_to_rgb_array(image_path, 1)
 
     assert (orig_w, orig_h) == (10, 20)
     assert (sampled_w, sampled_h) == (10, 20)
@@ -142,7 +142,7 @@ def test_convert_image_to_rgb_array_returns_data_and_metadata(tmp_path):
     assert data == expected_bytes
 
 
-def test_convert_image_to_rgb_array_downsamples(tmp_path):
+def testconvert_image_to_rgb_array_downsamples(tmp_path):
     """Verify the helper downsamples dimensions and reports updated metadata
     correctly."""
     image_path = tmp_path / "sample_downsample_image.tiff"
@@ -153,7 +153,7 @@ def test_convert_image_to_rgb_array_downsamples(tmp_path):
     image.save(image_path, format="TIFF")
     image.close()
 
-    data, orig_w, orig_h, sampled_w, sampled_h = _convert_image_to_rgb_array(image_path, 4)
+    data, orig_w, orig_h, sampled_w, sampled_h = convert_image_to_rgb_array(image_path, 4)
 
     assert (orig_w, orig_h) == (16, 8)
     assert (sampled_w, sampled_h) == (4, 2)
