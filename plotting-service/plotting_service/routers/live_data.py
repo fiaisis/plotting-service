@@ -52,7 +52,6 @@ def _get_file_snapshot(directory: Path) -> dict[str, float]:
         for entry in directory.iterdir():
             if entry.is_file():
                 # File may have been deleted between iterdir and stat
-
                 contextlib.suppress(OSError)
                 snapshot[entry.name] = entry.stat().st_mtime
     except OSError as e:
