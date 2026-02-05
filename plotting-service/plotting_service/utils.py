@@ -168,10 +168,7 @@ async def get_current_rb_async(instrument: str, timeout: float = 5.0) -> str:
         await ws.send(json.dumps({"type": "subscribe", "pvs": [pv]}))
 
         try:
-            return await asyncio.wait_for(
-                _wait_for_pv_update(ws, pv),
-                timeout=timeout
-            )
+            return await asyncio.wait_for(_wait_for_pv_update(ws, pv), timeout=timeout)
         except TimeoutError:
             raise TimeoutError(f"Failed to get PV {pv} within {timeout} seconds") from None
 
@@ -186,6 +183,7 @@ async def _wait_for_pv_update(ws, pv: str) -> str:
             # VString → RB is in `text`
 
             return data.get("text") or str(data.get("value"))
+
 
 def get_current_rb_for_instrument(instrument: str) -> str:
     """
