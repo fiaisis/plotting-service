@@ -167,22 +167,18 @@ async def get_current_rb_async(instrument: str, timeout: float = 5.0) -> str:
     async with websockets.connect(ws_url) as ws:
         await ws.send(json.dumps({"type": "subscribe", "pvs": [pv]}))
 
+        async def wait_for_update() -> str:
+            while True:
+                msg = await ws.recv()
+                data = json.loads(msg)
+
+                if data.get("type") == "update" and data.get("pv") == pv:
+                    return data.get("text") or str(data.get("value"))
+
         try:
-            return await asyncio.wait_for(_wait_for_pv_update(ws, pv), timeout=timeout)
+            return await asyncio.wait_for(wait_for_update(), timeout=timeout)
         except TimeoutError:
             raise TimeoutError(f"Failed to get PV {pv} within {timeout} seconds") from None
-
-
-async def _wait_for_pv_update(ws, pv: str) -> str:
-    """Helper function to wait for the specific PV update."""
-    while True:
-        msg = await ws.recv()
-        data = json.loads(msg)
-
-        if data.get("type") == "update" and data.get("pv") == pv:
-            # VString → RB is in `text`
-
-            return data.get("text") or str(data.get("value"))
 
 
 def get_current_rb_for_instrument(instrument: str) -> str:
