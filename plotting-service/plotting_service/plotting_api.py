@@ -1,33 +1,27 @@
 """Main module."""
 
-import importlib
 import logging
 import os
-import re
 import sys
 import typing
 from http import HTTPStatus
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
-from PIL import Image
+from fastapi import FastAPI, HTTPException
+from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, PlainTextResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
+from plotting_service.routers.health import HealthRouter
+from plotting_service.routers.imat import ImatRouter
+from plotting_service.routers.live_data import LiveDataRouter
+from plotting_service.routers.plotting import PlottingRouter
 from plotting_service.utils import (
     find_experiment_number,
-    find_file_experiment_number,
-    find_file_instrument,
-    find_file_user_number,
-    request_path_check,
+    get_current_rb_async,
 )
-
-h5_fastapi_utils = typing.cast("typing.Any", importlib.import_module("h5grove.fastapi_utils"))
-router = h5_fastapi_utils.router
-settings = h5_fastapi_utils.settings
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
@@ -38,23 +32,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.info("Starting Plotting Service")
 
-ALLOWED_ORIGINS = ["*"]
-CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
-logger.info("Setting ceph directory to %s", CEPH_DIR)
-settings.base_dir = Path(CEPH_DIR).resolve()
-
-IMAT_DIR: Path = Path(os.getenv("IMAT_DIR", "/imat")).resolve()
-logger.info("Setting IMAT directory to %s", IMAT_DIR)
-IMAGE_SUFFIXES = {".tif", ".tiff"}
-
 DEV_MODE = os.environ.get("DEV_MODE", "False").lower() == "true"
 if DEV_MODE:
     logger.info("Development only mode")
 else:
     logger.info("Production ready mode")
-
-
 app = FastAPI()
+
+ALLOWED_ORIGINS = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -63,91 +49,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.get("/healthz")
-async def get() -> typing.Literal["ok"]:
-    """Health check endpoint :return: "ok"."""
-    try:
-        with Path(f"{CEPH_DIR}/GENERIC/autoreduce/healthy_file.txt").open("r") as fle:
-            lines = fle.readlines()
-            if lines[0] != "This is a healthy file! You have read it correctly!\n":
-                raise HTTPException(status_code=HTTPStatus.SERVICE_UNAVAILABLE)
-        return "ok"
-    except:  # noqa: E722
-        raise HTTPException(status_code=HTTPStatus.SERVICE_UNAVAILABLE) from None
-
-
-@app.get("/text/instrument/{instrument}/experiment_number/{experiment_number}", response_class=PlainTextResponse)
-async def get_text_file(instrument: str, experiment_number: int, filename: str) -> str:
-    # We don't check experiment number as it is an int and pydantic won't process any non int type and return a 422
-    # automatically
-    if (
-        ".." in instrument
-        or ".." in filename
-        or "/" in instrument
-        or "/" in filename
-        or "\\" in instrument
-        or "\\" in filename
-        or "~" in instrument
-        or "~" in filename
-    ):
-        raise HTTPException(status_code=HTTPStatus.FORBIDDEN)
-
-    path = find_file_instrument(CEPH_DIR, instrument, experiment_number, filename)
-    if path is None:
-        logger.error("Could not find the file requested.")
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
-
-    with path.open("r") as file:
-        return file.read()
-
-
-@app.get("/find_file/instrument/{instrument}/experiment_number/{experiment_number}")
-async def find_file_get_instrument(instrument: str, experiment_number: int, filename: str) -> str:
-    """Return the relative path to the env var CEPH_DIR that leads to the
-    requested file if one exists.
-
-    :param instrument: Instrument the file belongs to.
-    :param experiment_number: Experiment number the file belongs to.
-    :param filename: Filename to find.
-    :return: The relative path to the file in the CEPH_DIR env var.
-    """
-    path = find_file_instrument(
-        ceph_dir=CEPH_DIR, instrument=instrument, experiment_number=experiment_number, filename=filename
-    )
-    if path is None:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
-    return str(request_path_check(path=path, base_dir=CEPH_DIR))
-
-
-@app.get("/find_file/generic/experiment_number/{experiment_number}")
-async def find_file_generic_experiment_number(experiment_number: int, filename: str) -> str:
-    """Return the relative path to the env var CEPH_DIR that leads to the
-    requested file if one exists.
-
-    :param experiment_number: Experiment number the file belongs to.
-    :param filename: Filename to find
-    :return: The relative path to the file in the CEPH_DIR env var.
-    """
-    path = find_file_experiment_number(ceph_dir=CEPH_DIR, experiment_number=experiment_number, filename=filename)
-    if path is None:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
-    return str(request_path_check(path=path, base_dir=CEPH_DIR))
-
-
-@app.get("/find_file/generic/user_number/{user_number}")
-async def find_file_generic_user_number(user_number: int, filename: str) -> str:
-    """Return the relative path to the env var CEPH_DIR that leads to the
-    requested file if one exists.
-
-    :param user_number: Experiment number the file belongs to.
-    :param filename: Filename to find
-    :return: The relative path to the file in the CEPH_DIR env var.
-    """
-    path = find_file_user_number(ceph_dir=CEPH_DIR, user_number=user_number, filename=filename)
-    if path is None:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
-    return str(request_path_check(path, base_dir=CEPH_DIR))
+CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
+logger.info("Setting ceph directory to %s", CEPH_DIR)
+settings.base_dir = Path(CEPH_DIR).resolve()
 
 
 @app.middleware("http")
@@ -162,7 +66,7 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
         return await call_next(request)
     if request.method == "OPTIONS":
         return await call_next(request)
-    if request.url.path in ("/healthz", "/docs"):
+    if request.url.path.startswith(("/live", "/healthz", "/docs")):
         return await call_next(request)
 
     logger.info(f"Checking permissions for {request.url.path}")
@@ -205,101 +109,85 @@ async def check_permissions(request: Request, call_next: typing.Callable[..., ty
     raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden")
 
 
-def _latest_image_in_dir(directory: Path) -> Path | None:
-    """Return the newest image file under directory, searching recursively."""
-    latest_path: Path | None = None
-    latest_mtime: float = 0.0
+@app.middleware("http")
+async def check_live_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:  # noqa: C901, PLR0911, PLR0912
+    """
+    Middleware for the live app that checks if the user has permission
+    to view the *current* experiment on the requested instrument.
+    """
+    if DEV_MODE:
+        return await call_next(request)
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    if request.url.path in ("/healthz", "/docs", "/openapi.json"):
+        return await call_next(request)
 
-    for entry in directory.rglob("*"):
-        if entry.is_file() and entry.suffix.lower() in IMAGE_SUFFIXES:
-            mtime = entry.stat().st_mtime
-            if mtime > latest_mtime:
-                latest_path = entry
-                latest_mtime = mtime
+    logger.info(f"Checking live permissions for {request.url.path}")
 
-    return latest_path
+    token_query = request.query_params.get("token")
+    if token_query is None:
+        token_query = request.headers.get("Authorization")
+        if token_query is not None:
+            token_query = token_query.split(" ")[1]
+    if token_query is None:
+        raise HTTPException(HTTPStatus.UNAUTHORIZED, "Unauthenticated")
 
+    token = token_query
 
-def _convert_image_to_rgb_array(image_path: Path, downsample_factor: int) -> tuple[list[int], int, int, int, int]:
-    """Convert image into a RGB byte array to be used by frontend H5Web
-    interface."""
-    with Image.open(image_path) as image:
-        original_width, original_height = image.size
-        converted = image.convert("RGB")
+    # API Key check (if applicable globally, otherwise remove/adapt)
+    api_key = os.environ.get("API_KEY", "")
+    if token == api_key and api_key != "":
+        return await call_next(request)
 
-        if downsample_factor > 1:
-            # Reduce resolution while keeping at least 1x1 output
-            target_width = max(1, round(original_width / downsample_factor))
-            target_height = max(1, round(original_height / downsample_factor))
-            converted = converted.resize(
-                (target_width, target_height), Image.Resampling.LANCZOS
-            )  # Lanczos gives higher-quality downsampling
-
-        sampled_width, sampled_height = converted.size
-        data = list(converted.tobytes())
-
-    return data, original_width, original_height, sampled_width, sampled_height
-
-
-@app.get("/imat/latest-image", summary="Fetch the latest IMAT image")
-async def get_latest_imat_image(
-    downsample_factor: typing.Annotated[
-        int,
-        Query(
-            ge=1,
-            le=64,
-            description="Integer factor to reduce each dimension by (1 keeps original resolution).",
-        ),
-    ] = 8,
-) -> JSONResponse:
-    """Return the latest image from any RB folder within the IMAT directory."""
-    # Find RB* folders under the IMAT root
-    rb_dirs = [d for d in IMAT_DIR.iterdir() if d.is_dir() and re.fullmatch(r"RB\d+", d.name)]
-
-    if not rb_dirs:
-        raise HTTPException(HTTPStatus.NOT_FOUND, "No RB folders under IMAT_DIR")
-
-    latest_path: Path | None = None
-    latest_mtime: float = 0.0
-
-    # Find latest image across all RB folders
-    for rb_dir in rb_dirs:
-        rb_latest = _latest_image_in_dir(rb_dir)
-        if rb_latest is None:
-            continue
-
-        rb_mtime = rb_latest.stat().st_mtime
-
-        # Track the single most recent image across all RB folders
-        if rb_mtime > latest_mtime:
-            latest_path = rb_latest
-            latest_mtime = rb_mtime
-
-    if latest_path is None:
-        raise HTTPException(HTTPStatus.NOT_FOUND, "No images found in IMAT_DIR")
-
-    # Convert the image to RGB array
     try:
-        data, original_width, original_height, sampled_width, sampled_height = _convert_image_to_rgb_array(
-            latest_path, downsample_factor
-        )
-    except Exception as exc:
-        logger.error("Failed to convert IMAT image at %s", latest_path, exc_info=exc)
-        raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to convert IMAT image") from exc
+        user = get_user_from_token(token)
+    except AuthError:
+        raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden") from None
 
-    # Calculate effective downsample factor
-    effective_downsample = original_width / sampled_width if sampled_width else 1
+    if user.role == "staff":
+        return await call_next(request)
 
-    payload = {
-        "data": data,
-        "shape": [sampled_height, sampled_width, 3],
-        "originalWidth": original_width,
-        "originalHeight": original_height,
-        "sampledWidth": sampled_width,
-        "sampledHeight": sampled_height,
-        "downsampleFactor": effective_downsample,
-    }
-    return JSONResponse(payload)
+    file_param = request.query_params.get("file")
+    if not file_param:
+        logger.warning(f"Request to live app without 'file' param: {request.url}")
+
+        if request.url.path == "/":  # Root of sub-app
+            return await call_next(request)
+        raise HTTPException(HTTPStatus.BAD_REQUEST, "Missing 'file' parameter for live check")
+
+    # Assuming structure: INSTRUMENT/RBnumber/...
+    parts = Path(file_param).parts
+    if not parts or parts[0] == "/" or parts[0] == ".":
+        raise HTTPException(HTTPStatus.BAD_REQUEST, "Invalid file path format")
+
+    instrument = parts[0]
+
+    try:
+        current_rb = await get_current_rb_async(instrument)
+    except Exception as e:
+        logger.error(f"Failed to get current RB for instrument {instrument}: {e}")
+        # If we can't check 'live' status, fail safe
+        raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to verify live experiment status") from None
+
+    try:
+        # It usually comes as just the number from the PV, but handle "RB" prefix just in case
+        current_rb_int = int(current_rb[2:]) if current_rb.upper().startswith("RB") else int(current_rb)
+    except ValueError:
+        logger.error(f"Invalid RB number format from PV: {current_rb}")
+        raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Invalid live experiment data") from None
+
+    logger.info(f"Checking if user {user.user_number} has access to current RB {current_rb_int} on {instrument}")
+    allowed_experiments = get_experiments_for_user(user)
+
+    if current_rb_int in allowed_experiments:
+        return await call_next(request)
+
+    logger.warning(f"User {user.user_number} denied access to live experiment {current_rb_int}")
+    raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden: You do not have access to the current live experiment")
 
 
 app.include_router(router)
+app.include_router(HealthRouter)
+app.include_router(PlottingRouter)
+app.include_router(ImatRouter)
+app.include_router(LiveDataRouter)

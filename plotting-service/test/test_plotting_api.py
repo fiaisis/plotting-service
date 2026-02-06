@@ -10,7 +10,9 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from plotting_service import plotting_api
-from plotting_service.plotting_api import _convert_image_to_rgb_array, check_permissions
+from plotting_service.plotting_api import check_permissions
+from plotting_service.routers import imat
+from plotting_service.services.image_service import convert_image_to_rgb_array
 
 USER_TOKEN = (
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"  # noqa: S105
@@ -51,6 +53,7 @@ async def test_check_permissions_api_key():
 async def test_check_permissions_api_key_failed():
     os.environ["API_KEY"] = "ActuallyADecentAPIKey"
     request = mock.MagicMock()
+    request.url.path = "/data"
     request.headers.get("Authorization").split.return_value = [None, "foo"]
     call_next = AwaitableNonAsyncMagicMock()
 
@@ -82,6 +85,8 @@ async def test_check_permissions_token_user():
 @pytest.mark.asyncio
 async def test_check_permissions_token_user_failed_no_perms():
     request = mock.MagicMock()
+    request.url.path = "/data"
+    request.url.query = ""
     request.headers.get("Authorization").split.return_value = [None, USER_TOKEN]
     call_next = AwaitableNonAsyncMagicMock()
 
@@ -105,6 +110,7 @@ async def test_check_permissions_token_staff():
 @pytest.mark.asyncio
 async def test_check_permissions_token_failed_bad_token():
     request = mock.MagicMock()
+    request.url.path = "/data"
     request.headers.get("Authorization").split.return_value = [None, "bad_token"]
     call_next = AwaitableNonAsyncMagicMock()
 
@@ -114,7 +120,7 @@ async def test_check_permissions_token_failed_bad_token():
     call_next.assert_not_called()
 
 
-def test_convert_image_to_rgb_array_returns_data_and_metadata(tmp_path):
+def testconvert_image_to_rgb_array_returns_data_and_metadata(tmp_path):
     """Ensure images convert to RGB data without altering size when no
     downsampling occurs."""
     image_path = tmp_path / "sample_image.tiff"
@@ -122,7 +128,7 @@ def test_convert_image_to_rgb_array_returns_data_and_metadata(tmp_path):
     image.save(image_path, format="TIFF")
     image.close()
 
-    data, orig_w, orig_h, sampled_w, sampled_h = _convert_image_to_rgb_array(image_path, 1)
+    data, orig_w, orig_h, sampled_w, sampled_h = convert_image_to_rgb_array(image_path, 1)
 
     assert (orig_w, orig_h) == (10, 20)
     assert (sampled_w, sampled_h) == (10, 20)
@@ -136,7 +142,7 @@ def test_convert_image_to_rgb_array_returns_data_and_metadata(tmp_path):
     assert data == expected_bytes
 
 
-def test_convert_image_to_rgb_array_downsamples(tmp_path):
+def testconvert_image_to_rgb_array_downsamples(tmp_path):
     """Verify the helper downsamples dimensions and reports updated metadata
     correctly."""
     image_path = tmp_path / "sample_downsample_image.tiff"
@@ -147,7 +153,7 @@ def test_convert_image_to_rgb_array_downsamples(tmp_path):
     image.save(image_path, format="TIFF")
     image.close()
 
-    data, orig_w, orig_h, sampled_w, sampled_h = _convert_image_to_rgb_array(image_path, 4)
+    data, orig_w, orig_h, sampled_w, sampled_h = convert_image_to_rgb_array(image_path, 4)
 
     assert (orig_w, orig_h) == (16, 8)
     assert (sampled_w, sampled_h) == (4, 2)
@@ -166,7 +172,7 @@ def test_get_latest_imat_image_with_mock_rb_folder(tmp_path, monkeypatch):
     sample RB folder with a TIFF image, then calls the endpoint to retrieve RGB
     data and verifies the returned payload."""
     # Point the IMAT directory at an isolated temp dir with a single RB folder
-    monkeypatch.setattr(plotting_api, "IMAT_DIR", tmp_path)
+    monkeypatch.setattr(imat, "IMAT_DIR", tmp_path)
     rb_dir = tmp_path / "RB1234"
     rb_dir.mkdir()
 

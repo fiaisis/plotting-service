@@ -1,13 +1,31 @@
+import asyncio
+import json
 import logging
 import re
 from contextlib import suppress
 from http import HTTPStatus
 from pathlib import Path
 
+import websockets
 from fastapi import HTTPException
 from starlette.requests import Request
 
 logger = logging.getLogger(__name__)
+
+
+def validate_instrument_name(instrument: str) -> None:
+    """
+    Validate that the instrument name contains only alphanumeric characters and dashes/underscores.
+    Raises HTTPException with 403 Forbidden if the instrument name is invalid.
+
+    :param instrument: The instrument name to validate
+    :raises HTTPException: If the instrument name contains invalid characters
+    """
+    if not re.fullmatch(r"[A-Za-z0-9-_]+", instrument):
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN,
+            detail="Invalid instrument name: must contain only alphanumeric characters, dashes, and underscores",
+        )
 
 
 def safe_check_filepath(filepath: Path, base_path: str) -> None:
@@ -140,3 +158,34 @@ def request_path_check(path: Path | None, base_dir: str) -> Path:
     if path.is_relative_to(base_dir):
         path = path.relative_to(base_dir)
     return path
+
+
+async def get_current_rb_async(instrument: str, timeout: float = 5.0) -> str:
+    pv = f"IN:{instrument.upper()}:DAE:_RBNUMBER"
+    ws_url = "wss://ndaextweb4.nd.rl.ac.uk/pvws/pv"
+
+    async with websockets.connect(ws_url) as ws:
+        await ws.send(json.dumps({"type": "subscribe", "pvs": [pv]}))
+
+        async def wait_for_update() -> str:
+            while True:
+                msg = await ws.recv()
+                data = json.loads(msg)
+
+                if data.get("type") == "update" and data.get("pv") == pv:
+                    return data.get("text") or str(data.get("value"))
+
+        try:
+            return await asyncio.wait_for(wait_for_update(), timeout=timeout)
+        except TimeoutError:
+            raise TimeoutError(f"Failed to get PV {pv} within {timeout} seconds") from None
+
+
+def get_current_rb_for_instrument(instrument: str) -> str:
+    """
+    Given an instrument name, return the rb number (experiment number) of the current experiment on the instrument
+
+    :param instrument: Instrument name to get rb number for
+    :return: RB number of the current ISIS run
+    """
+    return asyncio.run(get_current_rb_async(instrument))

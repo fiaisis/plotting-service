@@ -37,6 +37,7 @@ jobs:
           pytest test --random-order --random-order-bucket=global --cov --cov-report=xml
 
       - name: Start backend
+        working-directory: /home/runner/work/plotting-service/plotting-service/plotting-service/
         env:
           CEPH_DIR: /home/runner/work/plotting-service/plotting-service/plotting-service/test/test_ceph
           DEV_MODE: True
