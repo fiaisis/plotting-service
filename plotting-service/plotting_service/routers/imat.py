@@ -7,16 +7,20 @@ from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
-from starlette.responses import JSONResponse
+from PIL import Image
+from starlette.responses import JSONResponse, Response
 
 from plotting_service.services.image_service import (
+    IMAGE_SUFFIXES,
     convert_image_to_rgb_array,
     find_latest_image_in_directory,
 )
+from plotting_service.utils import safe_check_filepath
 
 ImatRouter = APIRouter()
 
 IMAT_DIR: Path = Path(os.getenv("IMAT_DIR", "/imat")).resolve()
+CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
@@ -87,3 +91,83 @@ async def get_latest_imat_image(
         "downsampleFactor": effective_downsample,
     }
     return JSONResponse(payload)
+
+
+@ImatRouter.get("/imat/list-images", summary="List images in a directory")
+async def list_imat_images(
+    path: typing.Annotated[
+        str, Query(..., description="Path to the directory containing images, relative to CEPH_DIR")
+    ],
+) -> list[str]:
+    """Return a sorted list of TIFF images in the given directory."""
+
+    dir_path = (Path(CEPH_DIR) / path).resolve()
+    # Security: Ensure path is within CEPH_DIR
+    try:
+        safe_check_filepath(dir_path, CEPH_DIR)
+    except FileNotFoundError as err:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Directory not found") from err
+
+    if not dir_path.exists() or not dir_path.is_dir():
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Directory not found")
+
+    images = [entry.name for entry in dir_path.iterdir() if entry.is_file() and entry.suffix.lower() in IMAGE_SUFFIXES]
+
+    return sorted(images)
+
+
+@ImatRouter.get("/imat/image", summary="Fetch a specific TIFF image as raw data")
+async def get_imat_image(
+    path: typing.Annotated[str, Query(..., description="Path to the TIFF image file, relative to CEPH_DIR")],
+    downsample_factor: typing.Annotated[
+        int,
+        Query(
+            ge=1,
+            le=64,
+            description="Integer factor to reduce each dimension by (1 keeps original resolution).",
+        ),
+    ] = 1,
+) -> Response:
+    """Return the raw data of a specific TIFF image as binary."""
+
+    image_path = (Path(CEPH_DIR) / path).resolve()
+    # Security: Ensure path is within CEPH_DIR
+    try:
+        safe_check_filepath(image_path, CEPH_DIR)
+    except FileNotFoundError as err:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Directory not found") from err
+
+    if not image_path.exists() or not image_path.is_file():
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Image not found")
+
+    try:
+        with Image.open(image_path) as img:
+            original_width, original_height = img.size
+
+            if downsample_factor > 1:
+                target_width = max(1, round(original_width / downsample_factor))
+                target_height = max(1, round(original_height / downsample_factor))
+                display_img = img.resize((target_width, target_height), Image.Resampling.NEAREST)
+            else:
+                display_img = img
+
+            sampled_width, sampled_height = display_img.size
+            # For 16-bit TIFFs, tobytes() returns raw 16-bit bytes
+            data_bytes = display_img.tobytes()
+
+        headers = {
+            "X-Image-Width": str(sampled_width),
+            "X-Image-Height": str(sampled_height),
+            "X-Original-Width": str(original_width),
+            "X-Original-Height": str(original_height),
+            "X-Downsample-Factor": str(downsample_factor),
+            "Access-Control-Expose-Headers": (
+                "X-Image-Width, X-Image-Height, X-Original-Width, X-Original-Height, X-Downsample-Factor"
+            ),
+        }
+
+        return Response(content=data_bytes, media_type="application/octet-stream", headers=headers)
+
+    except Exception as exc:
+        logger.error(f"Failed to process image {image_path}: {exc}")
+        raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to process image") from exc

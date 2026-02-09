@@ -10,6 +10,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
@@ -48,6 +49,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)

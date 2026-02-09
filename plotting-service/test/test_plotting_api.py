@@ -204,3 +204,150 @@ def test_get_latest_imat_image_with_mock_rb_folder(tmp_path, monkeypatch):
     assert payload["shape"] == [2, 4, 3]
     assert payload["downsampleFactor"] == 2  # noqa: PLR2004
     assert payload["data"] == expected_bytes
+
+
+def test_list_imat_images(tmp_path, monkeypatch):
+    """Verify that /imat/list-images correctly filters and sorts image files."""
+    monkeypatch.setattr(imat, "CEPH_DIR", str(tmp_path))
+
+    # Create test directory
+    data_dir = tmp_path / "test_data"
+    data_dir.mkdir()
+    (data_dir / "image2.tiff").touch()
+    (data_dir / "image1.tif").touch()
+    (data_dir / "not_an_image.txt").touch()
+
+    client = TestClient(plotting_api.app)
+    response = client.get("/imat/list-images", params={"path": "test_data"}, headers={"Authorization": "Bearer foo"})
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == ["image1.tif", "image2.tiff"]
+
+
+def test_list_imat_images_not_found(tmp_path, monkeypatch):
+    """Ensure 404 is returned when the requested directory does not exist."""
+    monkeypatch.setattr(imat, "CEPH_DIR", str(tmp_path))
+
+    client = TestClient(plotting_api.app)
+    response = client.get("/imat/list-images", params={"path": "non_existent"}, headers={"Authorization": "Bearer foo"})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_list_imat_images_forbidden(tmp_path, monkeypatch):
+    """Verify that path traversal attempts are blocked with 403 Forbidden."""
+    monkeypatch.setattr(imat, "CEPH_DIR", str(tmp_path))
+
+    client = TestClient(plotting_api.app)
+    # safe_check_filepath should block this
+    response = client.get("/imat/list-images", params={"path": "../.."}, headers={"Authorization": "Bearer foo"})
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+def test_get_imat_image(tmp_path, monkeypatch):
+    """Ensure /imat/image returns raw binary data and correct metadata headers."""
+    monkeypatch.setattr(imat, "CEPH_DIR", str(tmp_path))
+
+    # Create a tiny 16-bit TIFF (4x4, all 1000)
+    image_path = tmp_path / "test.tif"
+    image = Image.new("I;16", (4, 4), color=1000)
+    image.save(image_path, format="TIFF")
+    image.close()
+
+    client = TestClient(plotting_api.app)
+    response = client.get("/imat/image", params={"path": "test.tif"}, headers={"Authorization": "Bearer foo"})
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.headers["X-Image-Width"] == "4"
+    assert response.headers["X-Image-Height"] == "4"
+    assert response.headers["X-Original-Width"] == "4"
+    assert response.headers["X-Original-Height"] == "4"
+    assert response.headers["X-Downsample-Factor"] == "1"
+    assert response.content == Image.open(image_path).tobytes()
+    assert response.headers["Content-Type"] == "application/octet-stream"
+
+
+def test_get_imat_image_downsampled(tmp_path, monkeypatch):
+    """Verify that downsampling works and headers reflect the sampled dimensions."""
+    monkeypatch.setattr(imat, "CEPH_DIR", str(tmp_path))
+
+    image_path = tmp_path / "test.tif"
+    image = Image.new("I;16", (8, 4), color=1000)
+    image.save(image_path, format="TIFF")
+    image.close()
+
+    client = TestClient(plotting_api.app)
+    response = client.get(
+        "/imat/image", params={"path": "test.tif", "downsample_factor": 2}, headers={"Authorization": "Bearer foo"}
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.headers["X-Image-Width"] == "4"
+    assert response.headers["X-Image-Height"] == "2"
+    assert response.headers["X-Original-Width"] == "8"
+    assert response.headers["X-Original-Height"] == "4"
+
+
+def test_get_latest_imat_image_no_rb_folders(tmp_path, monkeypatch):
+    """Ensure 404 is returned if no RB folders are present in the IMAT directory."""
+    monkeypatch.setattr(imat, "IMAT_DIR", tmp_path)
+
+    client = TestClient(plotting_api.app)
+    response = client.get("/imat/latest-image", headers={"Authorization": "Bearer foo"})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert "No RB folders" in response.json()["detail"]
+
+
+def test_get_imat_image_not_found(tmp_path, monkeypatch):
+    """Ensure /imat/image returns 404 for a missing file."""
+    monkeypatch.setattr(imat, "CEPH_DIR", str(tmp_path))
+
+    client = TestClient(plotting_api.app)
+    response = client.get("/imat/image", params={"path": "not_there.tif"}, headers={"Authorization": "Bearer foo"})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_get_latest_imat_image_no_images_in_rb(tmp_path, monkeypatch):
+    """Ensure 404 is returned if RB folders exist but contain no valid image files."""
+    monkeypatch.setattr(imat, "IMAT_DIR", tmp_path)
+    (tmp_path / "RB1234").mkdir()
+
+    client = TestClient(plotting_api.app)
+    response = client.get("/imat/latest-image", headers={"Authorization": "Bearer foo"})
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert "No images found" in response.json()["detail"]
+
+
+def test_get_imat_image_internal_error(tmp_path, monkeypatch):
+    """Verify that an exception during image processing returns a 500 error."""
+    monkeypatch.setattr(imat, "CEPH_DIR", str(tmp_path))
+    (tmp_path / "corrupt.tif").touch()
+
+    client = TestClient(plotting_api.app)
+    with mock.patch("PIL.Image.open", side_effect=Exception("Simulated failure")):
+        response = client.get("/imat/image", params={"path": "corrupt.tif"}, headers={"Authorization": "Bearer foo"})
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert "Unable to process image" in response.json()["detail"]
+
+
+def test_get_latest_imat_image_conversion_error(tmp_path, monkeypatch):
+    """Verify that an error during RB latest image conversion returns a 500 error."""
+    monkeypatch.setattr(imat, "IMAT_DIR", tmp_path)
+    rb_dir = tmp_path / "RB1234"
+    rb_dir.mkdir()
+    (rb_dir / "test.tif").touch()
+
+    client = TestClient(plotting_api.app)
+    with mock.patch(
+        "plotting_service.routers.imat.convert_image_to_rgb_array", side_effect=Exception("Conversion failed")
+    ):
+        response = client.get(
+            "/imat/latest-image", params={"downsample_factor": 1}, headers={"Authorization": "Bearer foo"}
+        )
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert "Unable to convert IMAT image" in response.json()["detail"]
