@@ -119,14 +119,14 @@ async def list_imat_images(
 @ImatRouter.get("/imat/image", summary="Fetch a specific TIFF image as raw data")
 async def get_imat_image(
     path: typing.Annotated[str, Query(..., description="Path to the TIFF image file, relative to CEPH_DIR")],
-        downsample_factor: typing.Annotated[
-            int,
-            Query(
-                ge=1,
-                le=64,
-                description="Integer factor to reduce each dimension by (1 keeps original resolution).",
-            ),
-        ] = 1,
+    downsample_factor: typing.Annotated[
+        int,
+        Query(
+            ge=1,
+            le=64,
+            description="Integer factor to reduce each dimension by (1 keeps original resolution).",
+        ),
+    ] = 1,
 ) -> Response:
     """Return the raw data of a specific TIFF image as binary."""
 
@@ -166,11 +166,7 @@ async def get_imat_image(
             ),
         }
 
-        return Response(
-            content=data_bytes,
-            media_type="application/octet-stream",
-            headers=headers
-        )
+        return Response(content=data_bytes, media_type="application/octet-stream", headers=headers)
 
     except Exception as exc:
         logger.error(f"Failed to process image {image_path}: {exc}")
