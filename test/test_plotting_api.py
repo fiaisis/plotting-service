@@ -218,11 +218,7 @@ def test_list_imat_images(tmp_path, monkeypatch):
     (data_dir / "not_an_image.txt").touch()
 
     client = TestClient(plotting_api.app)
-    response = client.get(
-        "/imat/list-images",
-        params={"path": "test_data"},
-        headers={"Authorization": "Bearer foo"}
-    )
+    response = client.get("/imat/list-images", params={"path": "test_data"}, headers={"Authorization": "Bearer foo"})
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == ["image1.tif", "image2.tiff"]
@@ -233,11 +229,7 @@ def test_list_imat_images_not_found(tmp_path, monkeypatch):
     monkeypatch.setattr(imat, "CEPH_DIR", str(tmp_path))
 
     client = TestClient(plotting_api.app)
-    response = client.get(
-        "/imat/list-images",
-        params={"path": "non_existent"},
-        headers={"Authorization": "Bearer foo"}
-    )
+    response = client.get("/imat/list-images", params={"path": "non_existent"}, headers={"Authorization": "Bearer foo"})
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 
@@ -248,11 +240,7 @@ def test_list_imat_images_forbidden(tmp_path, monkeypatch):
 
     client = TestClient(plotting_api.app)
     # safe_check_filepath should block this
-    response = client.get(
-        "/imat/list-images",
-        params={"path": "../.."},
-        headers={"Authorization": "Bearer foo"}
-    )
+    response = client.get("/imat/list-images", params={"path": "../.."}, headers={"Authorization": "Bearer foo"})
 
     assert response.status_code == HTTPStatus.FORBIDDEN
 
@@ -268,11 +256,7 @@ def test_get_imat_image(tmp_path, monkeypatch):
     image.close()
 
     client = TestClient(plotting_api.app)
-    response = client.get(
-        "/imat/image",
-        params={"path": "test.tif"},
-        headers={"Authorization": "Bearer foo"}
-    )
+    response = client.get("/imat/image", params={"path": "test.tif"}, headers={"Authorization": "Bearer foo"})
 
     assert response.status_code == HTTPStatus.OK
     assert response.headers["X-Image-Width"] == "4"
@@ -295,9 +279,7 @@ def test_get_imat_image_downsampled(tmp_path, monkeypatch):
 
     client = TestClient(plotting_api.app)
     response = client.get(
-        "/imat/image",
-        params={"path": "test.tif", "downsample_factor": 2},
-        headers={"Authorization": "Bearer foo"}
+        "/imat/image", params={"path": "test.tif", "downsample_factor": 2}, headers={"Authorization": "Bearer foo"}
     )
 
     assert response.status_code == HTTPStatus.OK
@@ -312,10 +294,7 @@ def test_get_latest_imat_image_no_rb_folders(tmp_path, monkeypatch):
     monkeypatch.setattr(imat, "IMAT_DIR", tmp_path)
 
     client = TestClient(plotting_api.app)
-    response = client.get(
-        "/imat/latest-image",
-        headers={"Authorization": "Bearer foo"}
-    )
+    response = client.get("/imat/latest-image", headers={"Authorization": "Bearer foo"})
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert "No RB folders" in response.json()["detail"]
@@ -326,11 +305,7 @@ def test_get_imat_image_not_found(tmp_path, monkeypatch):
     monkeypatch.setattr(imat, "CEPH_DIR", str(tmp_path))
 
     client = TestClient(plotting_api.app)
-    response = client.get(
-        "/imat/image",
-        params={"path": "not_there.tif"},
-        headers={"Authorization": "Bearer foo"}
-    )
+    response = client.get("/imat/image", params={"path": "not_there.tif"}, headers={"Authorization": "Bearer foo"})
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 
@@ -341,10 +316,7 @@ def test_get_latest_imat_image_no_images_in_rb(tmp_path, monkeypatch):
     (tmp_path / "RB1234").mkdir()
 
     client = TestClient(plotting_api.app)
-    response = client.get(
-        "/imat/latest-image",
-        headers={"Authorization": "Bearer foo"}
-    )
+    response = client.get("/imat/latest-image", headers={"Authorization": "Bearer foo"})
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert "No images found" in response.json()["detail"]
 
@@ -356,11 +328,7 @@ def test_get_imat_image_internal_error(tmp_path, monkeypatch):
 
     client = TestClient(plotting_api.app)
     with mock.patch("PIL.Image.open", side_effect=Exception("Simulated failure")):
-        response = client.get(
-            "/imat/image",
-            params={"path": "corrupt.tif"},
-            headers={"Authorization": "Bearer foo"}
-        )
+        response = client.get("/imat/image", params={"path": "corrupt.tif"}, headers={"Authorization": "Bearer foo"})
 
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
     assert "Unable to process image" in response.json()["detail"]
@@ -378,9 +346,7 @@ def test_get_latest_imat_image_conversion_error(tmp_path, monkeypatch):
         "plotting_service.routers.imat.convert_image_to_rgb_array", side_effect=Exception("Conversion failed")
     ):
         response = client.get(
-            "/imat/latest-image",
-            params={"downsample_factor": 1},
-            headers={"Authorization": "Bearer foo"}
+            "/imat/latest-image", params={"downsample_factor": 1}, headers={"Authorization": "Bearer foo"}
         )
 
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
