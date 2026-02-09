@@ -31,7 +31,7 @@ def _setup_and_clean_temp_dir():
     [
         (Path(CEPH_DIR) / "good" / "path" / "here" / "file.txt", True),
         (Path(CEPH_DIR) / "bad" / "path" / "here" / "file.txt", False),
-        (Path(CEPH_DIR) / ".." / ".." / ".." / "file.txt", False),
+        (Path(CEPH_DIR) / ".." / ".." / "file.txt", False),
     ],
 )
 def test_safe_check_filepath(filepath_to_check: Path, result: bool):

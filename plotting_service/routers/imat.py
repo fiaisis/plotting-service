@@ -103,7 +103,10 @@ async def list_imat_images(
 
     dir_path = (Path(CEPH_DIR) / path).resolve()
     # Security: Ensure path is within CEPH_DIR
-    safe_check_filepath(dir_path, CEPH_DIR)
+    try:
+        safe_check_filepath(dir_path, CEPH_DIR)
+    except FileNotFoundError:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Directory not found")
 
     if not dir_path.exists() or not dir_path.is_dir():
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Directory not found")
@@ -133,7 +136,10 @@ async def get_imat_image(
 
     image_path = (Path(CEPH_DIR) / path).resolve()
     # Security: Ensure path is within CEPH_DIR
-    safe_check_filepath(image_path, CEPH_DIR)
+    try:
+        safe_check_filepath(image_path, CEPH_DIR)
+    except FileNotFoundError:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Directory not found")
 
     if not image_path.exists() or not image_path.is_file():
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Image not found")
