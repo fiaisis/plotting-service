@@ -8,9 +8,9 @@ from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from starlette.middleware.gzip import GZipMiddleware
 from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token

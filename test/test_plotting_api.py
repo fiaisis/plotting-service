@@ -374,7 +374,9 @@ def test_get_latest_imat_image_conversion_error(tmp_path, monkeypatch):
     (rb_dir / "test.tif").touch()
 
     client = TestClient(plotting_api.app)
-    with mock.patch("plotting_service.routers.imat.convert_image_to_rgb_array", side_effect=Exception("Conversion failed")):
+    with mock.patch(
+        "plotting_service.routers.imat.convert_image_to_rgb_array", side_effect=Exception("Conversion failed")
+    ):
         response = client.get(
             "/imat/latest-image",
             params={"downsample_factor": 1},
