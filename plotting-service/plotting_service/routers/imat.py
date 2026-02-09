@@ -15,6 +15,7 @@ from plotting_service.services.image_service import (
     convert_image_to_rgb_array,
     find_latest_image_in_directory,
 )
+from plotting_service.utils import safe_check_filepath
 
 ImatRouter = APIRouter()
 
@@ -99,7 +100,6 @@ async def list_imat_images(
     ],
 ) -> list[str]:
     """Return a sorted list of TIFF images in the given directory."""
-    from plotting_service.utils import safe_check_filepath
 
     dir_path = (Path(CEPH_DIR) / path).resolve()
     # Security: Ensure path is within CEPH_DIR
@@ -129,7 +129,6 @@ async def get_imat_image(
         ] = 1,
 ) -> Response:
     """Return the raw data of a specific TIFF image as binary."""
-    from plotting_service.utils import safe_check_filepath
 
     image_path = (Path(CEPH_DIR) / path).resolve()
     # Security: Ensure path is within CEPH_DIR
