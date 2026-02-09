@@ -7,16 +7,14 @@ from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
-from starlette.responses import JSONResponse, Response
 from PIL import Image
-
+from starlette.responses import JSONResponse, Response
 
 from plotting_service.services.image_service import (
+    IMAGE_SUFFIXES,
     convert_image_to_rgb_array,
     find_latest_image_in_directory,
-    IMAGE_SUFFIXES
 )
-
 
 ImatRouter = APIRouter()
 
@@ -96,7 +94,9 @@ async def get_latest_imat_image(
 
 @ImatRouter.get("/imat/list-images", summary="List images in a directory")
 async def list_imat_images(
-        path: str = Query(..., description="Path to the directory containing images, relative to CEPH_DIR")
+    path: typing.Annotated[
+        str, Query(..., description="Path to the directory containing images, relative to CEPH_DIR")
+    ],
 ) -> list[str]:
     """Return a sorted list of TIFF images in the given directory."""
     from plotting_service.utils import safe_check_filepath
@@ -105,23 +105,20 @@ async def list_imat_images(
     # Security: Ensure path is within CEPH_DIR
     try:
         safe_check_filepath(dir_path, CEPH_DIR)
-    except FileNotFoundError:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Directory not found")
+    except FileNotFoundError as err:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Directory not found") from err
 
     if not dir_path.exists() or not dir_path.is_dir():
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Directory not found")
 
-    images = []
-    for entry in dir_path.iterdir():
-        if entry.is_file() and entry.suffix.lower() in IMAGE_SUFFIXES:
-            images.append(entry.name)
+    images = [entry.name for entry in dir_path.iterdir() if entry.is_file() and entry.suffix.lower() in IMAGE_SUFFIXES]
 
     return sorted(images)
 
 
 @ImatRouter.get("/imat/image", summary="Fetch a specific TIFF image as raw data")
 async def get_imat_image(
-        path: str = Query(..., description="Path to the TIFF image file, relative to CEPH_DIR"),
+    path: typing.Annotated[str, Query(..., description="Path to the TIFF image file, relative to CEPH_DIR")],
         downsample_factor: typing.Annotated[
             int,
             Query(
@@ -138,8 +135,8 @@ async def get_imat_image(
     # Security: Ensure path is within CEPH_DIR
     try:
         safe_check_filepath(image_path, CEPH_DIR)
-    except FileNotFoundError:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Directory not found")
+    except FileNotFoundError as err:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Directory not found") from err
 
     if not image_path.exists() or not image_path.is_file():
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Image not found")
@@ -151,11 +148,13 @@ async def get_imat_image(
             if downsample_factor > 1:
                 target_width = max(1, round(original_width / downsample_factor))
                 target_height = max(1, round(original_height / downsample_factor))
-                img = img.resize((target_width, target_height), Image.Resampling.NEAREST)
+                display_img = img.resize((target_width, target_height), Image.Resampling.NEAREST)
+            else:
+                display_img = img
 
-            sampled_width, sampled_height = img.size
+            sampled_width, sampled_height = display_img.size
             # For 16-bit TIFFs, tobytes() returns raw 16-bit bytes
-            data_bytes = img.tobytes()
+            data_bytes = display_img.tobytes()
 
         headers = {
             "X-Image-Width": str(sampled_width),
@@ -163,7 +162,9 @@ async def get_imat_image(
             "X-Original-Width": str(original_width),
             "X-Original-Height": str(original_height),
             "X-Downsample-Factor": str(downsample_factor),
-            "Access-Control-Expose-Headers": "X-Image-Width, X-Image-Height, X-Original-Width, X-Original-Height, X-Downsample-Factor"
+            "Access-Control-Expose-Headers": (
+                "X-Image-Width, X-Image-Height, X-Original-Width, X-Original-Height, X-Downsample-Factor"
+            ),
         }
 
         return Response(
