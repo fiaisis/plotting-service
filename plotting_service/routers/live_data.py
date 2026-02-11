@@ -15,6 +15,7 @@ from plotting_service.utils import safe_check_filepath
 LiveDataRouter = APIRouter(prefix="/live")
 
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
+GENERIC_DIR = "GENERIC" if os.environ.get("PRODUCTION", "").lower() == "true" else "GENERIC-staging"
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
@@ -42,7 +43,7 @@ async def get_live_data_files(instrument: str) -> list[str]:
             status_code=HTTPStatus.NOT_FOUND, detail=f"Live data directory for '{instrument}' not found"
         )
 
-    safe_check_filepath(live_data_path, CEPH_DIR + "/GENERIC/livereduce")
+    safe_check_filepath(live_data_path, CEPH_DIR + f"/{GENERIC_DIR}/livereduce")
 
     files = [f.name for f in live_data_path.iterdir() if f.is_file()]
     return sorted(files)
@@ -71,7 +72,7 @@ async def live_data(instrument: str, poll_interval: int = 2, keepalive_interval:
             status_code=HTTPStatus.NOT_FOUND, detail=f"Live data directory for '{instrument}' not found"
         )
 
-    safe_check_filepath(live_data_path, CEPH_DIR + "/GENERIC/livereduce")
+    safe_check_filepath(live_data_path, CEPH_DIR + f"/{GENERIC_DIR}/livereduce")
 
     return StreamingResponse(
         generate_file_change_events(live_data_path, CEPH_DIR, instrument, keepalive_interval, poll_interval),
