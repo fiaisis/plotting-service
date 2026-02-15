@@ -1,7 +1,7 @@
 "use client";
 import "@h5web/app/dist/styles.css";
-import { App, H5GroveProvider } from "@h5web/app";
-import { useEffect, useState } from "react";
+import { App, H5GroveProvider, createBasicFetcher } from "@h5web/app";
+import { useEffect, useMemo, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { CircularProgress, Stack } from "@mui/material";
 import { FileQueryUrl } from "@/components/utils/FileQueryUrl";
@@ -20,6 +20,14 @@ export default function NexusViewer(props: {
   const [token, setToken] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [groveApiUrl, setApiUrl] = useState<string>(props.apiUrl);
+
+  const fetcher = useMemo(() => {
+    const headers: HeadersInit = {};
+    if (token !== "") {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    return createBasicFetcher({ headers });
+  }, [token]);
 
   useEffect(() => {
     setLoading(true);
@@ -91,12 +99,8 @@ export default function NexusViewer(props: {
         <H5GroveProvider
           url={groveApiUrl}
           filepath={filepath}
-          axiosConfig={{
-            params: { file: filepath },
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }}
+          fetcher={fetcher}
+          resetKeys={[filepath, token, groveApiUrl]}
         >
           <App propagateErrors />
         </H5GroveProvider>
