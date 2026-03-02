@@ -192,7 +192,7 @@ async def remove_trailing_slash(request: Request, call_next) -> Response:
     path = request.scope.get("path", "")
 
     # If the path ends with a slash (and isn't just the root "/"), strip it
-    if path != "/" and path.endswith("/"):
+    if path.startswith("/live") and path.endswith("/"):
         new_path = path.rstrip("/")
 
         request.scope["path"] = new_path
