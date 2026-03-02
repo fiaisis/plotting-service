@@ -67,6 +67,21 @@ settings.base_dir = Path(CEPH_DIR).resolve()
 
 
 @app.middleware("http")
+async def remove_trailing_slash(request: Request, call_next: typing.Callable[..., typing.Any]) -> Response:
+    path = request.scope.get("path", "")
+    logger.info(f"Removing trailing slash from path: {path}")
+    # If the path ends with a slash (and isn't just the root "/"), strip it
+    if path != "/" and path.endswith("/") and "livereduce" in path.lower():
+        new_path = path.rstrip("/")
+
+        request.scope["path"] = new_path
+
+        if "raw_path" in request.scope:
+            request.scope["raw_path"] = new_path.encode("utf-8")
+
+    return await call_next(request)
+
+@app.middleware("http")
 async def check_permissions(request: Request, call_next: typing.Callable[..., typing.Any]) -> typing.Any:  # noqa: C901, PLR0911
     """Middleware that checks the requestee token has permissions for that
     experiment
@@ -198,20 +213,7 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
     raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden: You do not have access to the current live experiment")
 
 
-@app.middleware("http")
-async def remove_trailing_slash(request: Request, call_next: typing.Callable[..., typing.Any]) -> Response:
-    path = request.scope.get("path", "")
-    logger.info(f"Removing trailing slash from path: {path}")
-    # If the path ends with a slash (and isn't just the root "/"), strip it
-    if path != "/" and path.endswith("/") and "livereduce" in path.lower():
-        new_path = path.rstrip("/")
 
-        request.scope["path"] = new_path
-
-        if "raw_path" in request.scope:
-            request.scope["raw_path"] = new_path.encode("utf-8")
-
-    return await call_next(request)
 
 
 app.include_router(router)
