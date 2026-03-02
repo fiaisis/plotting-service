@@ -33,6 +33,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.info("Starting Plotting Service")
 
+class EndpointFilter(logging.Filter):
+    """Filter out log messages containing /healthz or /ready."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Filter out log messages containing /healthz or /ready."""
+        return record.getMessage().find("/healthz") == -1 and record.getMessage().find("/ready") == -1
+
+
+logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
+
 DEV_MODE = os.environ.get("DEV_MODE", "False").lower() == "true"
 if DEV_MODE:
     logger.info("Development only mode")
