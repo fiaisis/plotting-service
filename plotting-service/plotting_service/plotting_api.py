@@ -186,6 +186,7 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
     logger.warning(f"User {user.user_number} denied access to live experiment {current_rb_int}")
     raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden: You do not have access to the current live experiment")
 
+
 @app.middleware("http")
 async def remove_trailing_slash(request: Request, call_next) -> Response:
     path = request.scope.get("path", "")
