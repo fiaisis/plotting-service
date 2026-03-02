@@ -33,6 +33,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.info("Starting Plotting Service")
 
+
 class EndpointFilter(logging.Filter):
     """Filter out log messages containing /healthz or /ready."""
 
