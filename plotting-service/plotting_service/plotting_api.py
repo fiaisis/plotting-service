@@ -69,9 +69,8 @@ settings.base_dir = Path(CEPH_DIR).resolve()
 @app.middleware("http")
 async def remove_trailing_slash(request: Request, call_next: typing.Callable[..., typing.Any]) -> Response:
     path = request.scope.get("path", "")
-    logger.info(f"Removing trailing slash from path: {path}")
     # If the path ends with a slash (and isn't just the root "/"), strip it
-    if path != "/" and path.endswith("/") and "livereduce" in path.lower():
+    if path != "/" and path.endswith("/"):
         new_path = path.rstrip("/")
 
         request.scope["path"] = new_path
