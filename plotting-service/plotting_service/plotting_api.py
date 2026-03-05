@@ -8,7 +8,6 @@ from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.openapi.models import Response
 from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
@@ -64,21 +63,6 @@ app.add_middleware(
 CEPH_DIR = os.environ.get("CEPH_DIR", "/ceph")
 logger.info("Setting ceph directory to %s", CEPH_DIR)
 settings.base_dir = Path(CEPH_DIR).resolve()
-
-
-# @app.middleware("http")
-# async def remove_trailing_slash(request: Request, call_next: typing.Callable[..., typing.Any]) -> Response:
-#     path = request.scope.get("path", "")
-#     # If the path ends with a slash (and isn't just the root "/"), strip it
-#     if path != "/" and path.endswith("/"):
-#         new_path = path.rstrip("/")
-#         logger.info(f"Old Path {path} - New Path {new_path}")
-#         request.scope["path"] = new_path
-#
-#         if "raw_path" in request.scope:
-#             request.scope["raw_path"] = new_path.encode("utf-8")
-#
-#     return await call_next(request)
 
 
 @app.middleware("http")
