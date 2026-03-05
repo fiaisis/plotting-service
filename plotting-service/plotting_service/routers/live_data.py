@@ -47,13 +47,16 @@ async def get_live_data_files(instrument: str) -> list[str]:
     files = [f.name for f in live_data_path.iterdir() if f.is_file()]
     return sorted(files)
 
+
 @LiveDataRouter.get("/live-data/{instrument}/sample-env", summary="Get sample environment file content")
 async def get_sample_env(instrument: str) -> str:
     live_datapath = get_live_data_directory(instrument, CEPH_DIR)
     if live_datapath is None:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Live data directory for '{instrument}' not found")
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail=f"Live data directory for '{instrument}' not found"
+        )
     safe_check_filepath(live_datapath, CEPH_DIR + "/GENERIC/livereduce")
-    with (Path(live_datapath) /  f"{instrument.lower()}_env.txt").open("r") as f:
+    with (Path(live_datapath) / f"{instrument.lower()}_env.txt").open("r") as f:
         return f.read()
 
 
