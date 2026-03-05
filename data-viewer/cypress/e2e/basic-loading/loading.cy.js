@@ -1,7 +1,7 @@
 describe("Basic loading tests for test nexus file", () => {
   beforeEach(() => {
     cy.visit(
-      "http://localhost:3000/view/mari/20024/MAR29531_10.5meV_sa.nxspe",
+      "http://localhost:3000/view/MARI/20024/MAR29531_10.5meV_sa.nxspe",
       { failOnStatusCode: false },
     );
   });
@@ -18,7 +18,7 @@ describe("Test for loading nexus file with space in name", () => {
   beforeEach(() => {
     // This URL DOES have a whitespace, but the underline in most IDEs makes it look like an underscore
     cy.visit(
-      "http://localhost:3000/view/mari/20024/MAR29531 10.5meV_sa.nxspe",
+      "http://localhost:3000/view/MARI/20024/MAR29531 10.5meV_sa.nxspe",
       { failOnStatusCode: false },
     );
   });
