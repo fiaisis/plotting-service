@@ -108,7 +108,7 @@ def get_live_data_directory(instrument: str, ceph_dir: str) -> Path | None:
     :return: Path to live data directory, or None if it doesn't exist
     """
     instrument_upper = instrument.upper()
-    live_data_path = Path(ceph_dir) / "GENERIC" / "livereduce" / instrument_upper
+    live_data_path = Path(ceph_dir) / "GENERIC" / "livereduce" / f"{instrument_upper}-staging"
 
     if not (live_data_path.exists() and live_data_path.is_dir()):
         return None
