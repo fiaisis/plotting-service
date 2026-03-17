@@ -37,17 +37,16 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd plotting-service
           python -m pip install --upgrade pip
           python -m pip install .[formatting]
 
       - name: Run ruff formatting
         run: |
-          ruff format plotting-service
+          ruff format .
 
       - name: Run ruff linting
         run: |
-          ruff check --fix plotting-service
+          ruff check --fix .
 
       - name: Commit changes
         run: |
@@ -59,4 +58,4 @@ jobs:
 
       - name: Run mypy
         run: |
-          mypy --strict plotting-service/plotting_service
+          mypy --strict plotting_service
