@@ -19,46 +19,20 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 25
-
       - name: Install python dependencies
         run: |
-          cd plotting-service
           python -m pip install --upgrade pip
           python -m pip install .
           python -m pip install .[test]
 
       - name: Run python tests
         run: |
-          cd plotting-service
           pytest test --random-order --random-order-bucket=global --cov --cov-report=xml
 
       - name: Start backend
-        working-directory: /home/runner/work/plotting-service/plotting-service/plotting-service/
+        working-directory: /home/runner/work/plotting-service/plotting-service/
         env:
-          CEPH_DIR: /home/runner/work/plotting-service/plotting-service/plotting-service/test/test_ceph
+          CEPH_DIR: /home/runner/work/plotting-service/plotting-service/test/test_ceph
           DEV_MODE: True
         run: uvicorn plotting_service.plotting_api:app &
 
-      # We do this as the current config has production specific values (e.g. proxy and build output type)
-      # and we want defaults for testing.
-      - name: Remove production config
-        run: rm data-viewer/next.config.mjs
-      - name: cypress-run
-        uses: cypress-io/github-action@v7
-        with:
-          build: yarn build
-          start: yarn start
-          working-directory: data-viewer
-          headed: true
-          browser: chrome
-
-      - name: Upload screenshots
-        uses: actions/upload-artifact@v6
-        if: failure()
-        with:
-          name: cypress-snapshots
-          path: data-viewer/cypress/screenshots

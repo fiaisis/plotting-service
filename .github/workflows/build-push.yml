@@ -32,19 +32,10 @@ jobs:
         id: plotting_service_build
         uses: docker/build-push-action@v6
         with:
-          file: ./plotting-service/Dockerfile
-          context: ./plotting-service
+          file: ./Dockerfile
+          context: ./
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/plotting-service:${{ github.sha }}
-      
-      - name: Build and push image
-        uses: docker/build-push-action@v6
-        id: data_viewer_build
-        with:
-          file: ./data-viewer/Dockerfile
-          context: ./data-viewer
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/data-viewer:${{ github.sha }}
 
       - name: Checkout the Gitops repository
         uses: actions/checkout@v6
@@ -57,14 +48,10 @@ jobs:
         with:
           cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "plotting-service").image = "ghcr.io/fiaisis/plotting-service@${{ steps.plotting_service_build.outputs.digest }}"' './components/plotting-service/envs/staging/plotting-service.yml'
   
-      - name: Edit the YAML data-viewer file for staging
-        uses: mikefarah/yq@v4.52.2
-        with:
-          cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "data-viewer").image = "ghcr.io/fiaisis/data-viewer@${{ steps.data_viewer_build.outputs.digest }}"' './components/data-viewer/envs/staging/data-viewer.yml'
-  
+
       - name: Commit and push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git commit -am "[CD] Update plotting-service/data-viewer with this commit ${{ github.event.head_commit.url}}"
+          git commit -am "[CD] Update plotting-service with this commit ${{ github.event.head_commit.url}}"
           git push
