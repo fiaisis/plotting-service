@@ -12,20 +12,20 @@
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@h5web/app": "^16.0.1",
-    "@mui/material": "7.3.8",
-    "@mui/styled-engine-sc": "7.3.8",
-    "next": "14.2.35",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "styled-components": "6.3.11"
+    "@mui/material": "7.3.9",
+    "@mui/styled-engine-sc": "7.3.9",
+    "next": "16.2.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "styled-components": "6.3.12"
   },
   "devDependencies": {
     "@types/node": "^25",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19",
-    "cypress": "^15.11.0",
+    "cypress": "^15.12.0",
     "eslint": "^10",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "16.2.0",
     "prettier": "^3.8.1",
     "typescript": "^5"
   }
