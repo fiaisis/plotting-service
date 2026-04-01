@@ -120,47 +120,20 @@ async def test_check_permissions_token_failed_bad_token():
     call_next.assert_not_called()
 
 
-def testconvert_image_to_rgb_array_returns_data_and_metadata(tmp_path):
-    """Ensure images convert to RGB data without altering size when no
-    downsampling occurs."""
+def testconvert_image_to_rgb_array_returns_data_and_shape(tmp_path):
+    """Ensure images convert to RGB data while preserving their size."""
     image_path = tmp_path / "sample_image.tiff"
     image = Image.new("L", (10, 20), color=128)
     image.save(image_path, format="TIFF")
     image.close()
 
-    data, orig_w, orig_h, sampled_w, sampled_h = convert_image_to_rgb_array(image_path, 1)
+    data, width, height = convert_image_to_rgb_array(image_path)
 
-    assert (orig_w, orig_h) == (10, 20)
-    assert (sampled_w, sampled_h) == (10, 20)
-    assert len(data) == sampled_w * sampled_h * 3
+    assert (width, height) == (10, 20)
+    assert len(data) == width * height * 3
 
     with Image.open(image_path) as original:
         expected = original.convert("RGB")
-    expected_bytes = list(expected.tobytes())
-    expected.close()
-
-    assert data == expected_bytes
-
-
-def testconvert_image_to_rgb_array_downsamples(tmp_path):
-    """Verify the helper downsamples dimensions and reports updated metadata
-    correctly."""
-    image_path = tmp_path / "sample_downsample_image.tiff"
-    image = Image.new("L", (16, 8))
-    for x in range(16):
-        for y in range(8):
-            image.putpixel((x, y), min(255, x * 16 + y * 8))
-    image.save(image_path, format="TIFF")
-    image.close()
-
-    data, orig_w, orig_h, sampled_w, sampled_h = convert_image_to_rgb_array(image_path, 4)
-
-    assert (orig_w, orig_h) == (16, 8)
-    assert (sampled_w, sampled_h) == (4, 2)
-    assert len(data) == sampled_w * sampled_h * 3
-
-    with Image.open(image_path) as original:
-        expected = original.convert("RGB").resize((4, 2), Image.Resampling.LANCZOS)
     expected_bytes = list(expected.tobytes())
     expected.close()
 
@@ -186,21 +159,14 @@ def test_get_latest_imat_image_with_mock_rb_folder(tmp_path, monkeypatch):
     image.close()
 
     with Image.open(image_path) as original:
-        expected = original.convert("RGB").resize((4, 2), Image.Resampling.LANCZOS)
+        expected = original.convert("RGB")
     expected_bytes = list(expected.tobytes())
     expected.close()
 
-    # Call the endpoint and verify the downsampled RGB payload
+    # Call the endpoint and verify the RGB payload
     client = TestClient(plotting_api.app)
-    response = client.get(
-        "/imat/latest-image", params={"downsample_factor": 2}, headers={"Authorization": "Bearer foo"}
-    )
+    response = client.get("/imat/latest-image", headers={"Authorization": "Bearer foo"})
     assert response.status_code == HTTPStatus.OK
     payload = response.json()
-    assert payload["originalWidth"] == 8  # noqa: PLR2004
-    assert payload["originalHeight"] == 4  # noqa: PLR2004
-    assert payload["sampledWidth"] == 4  # noqa: PLR2004
-    assert payload["sampledHeight"] == 2  # noqa: PLR2004
-    assert payload["shape"] == [2, 4, 3]
-    assert payload["downsampleFactor"] == 2  # noqa: PLR2004
+    assert payload["shape"] == [4, 8, 3]
     assert payload["data"] == expected_bytes
