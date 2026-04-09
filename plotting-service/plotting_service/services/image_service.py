@@ -31,7 +31,7 @@ def convert_image_to_rgb_array(image_path: Path) -> tuple[list[int], int, int]:
     interface.
 
     :param image_path: Path to the image file
-    :return: Tuple of (data bytes, width, height)
+    :return: Tuple of (list of byte values, width, height)
     """
     with Image.open(image_path) as image:
         converted = image.convert("RGB")
