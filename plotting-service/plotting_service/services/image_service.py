@@ -27,7 +27,7 @@ def find_latest_image_in_directory(directory: Path) -> Path | None:
 
 
 def convert_image_to_rgb_array(image_path: Path) -> tuple[list[int], int, int]:
-    """Convert image into a RGB byte array to be used by frontend H5Web
+    """Convert image into a list of byte values to be used by frontend H5Web
     interface.
 
     :param image_path: Path to the image file
