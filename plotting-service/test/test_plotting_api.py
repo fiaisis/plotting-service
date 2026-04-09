@@ -120,7 +120,7 @@ async def test_check_permissions_token_failed_bad_token():
     call_next.assert_not_called()
 
 
-def testconvert_image_to_rgb_array_returns_data_and_shape(tmp_path):
+def test_convert_image_to_rgb_array_returns_data_and_shape(tmp_path):
     """Ensure images convert to RGB data while preserving their size."""
     image_path = tmp_path / "sample_image.tiff"
     image = Image.new("L", (10, 20), color=128)
