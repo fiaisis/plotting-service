@@ -48,7 +48,7 @@ if DEV_MODE:
     logger.info("Development only mode")
 else:
     logger.info("Production ready mode")
-app = FastAPI()
+app = FastAPI(root_path="/plottingapi")
 
 ALLOWED_ORIGINS = ["*"]
 
