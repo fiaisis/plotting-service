@@ -5,7 +5,7 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     groups:
       action-packages:
         patterns:
@@ -15,16 +15,16 @@ updates:
   - package-ecosystem: "pip" #
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     groups:
       python-packages:
         patterns:
           - "*"
 
   - package-ecosystem: "docker"
-    directory: "/plotting-service"
+    directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     groups:
       plotting-service-docker-image:
         patterns:
