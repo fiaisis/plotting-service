@@ -5,7 +5,7 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     groups:
       action-packages:
         patterns:
@@ -13,37 +13,19 @@ updates:
 
   # Maintain dependencies for pip
   - package-ecosystem: "pip" #
-    directory: "/plotting-service"
+    directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     groups:
       python-packages:
         patterns:
           - "*"
 
   - package-ecosystem: "docker"
-    directory: "/plotting-service"
+    directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     groups:
       plotting-service-docker-image:
-        patterns:
-          - "*"
-
-  - package-ecosystem: "docker"
-    directory: "/data-viewer"
-    schedule:
-      interval: "daily"
-    groups:
-      data-viewer-docker-image:
-        patterns:
-          - "*"
-
-  - package-ecosystem: "npm"
-    directory: "/data-viewer"
-    schedule:
-      interval: "daily"
-    groups:
-      yarn-packages:
         patterns:
           - "*"
