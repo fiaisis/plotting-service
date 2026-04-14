@@ -33,16 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 @ImatRouter.get("/imat/latest-image", summary="Fetch the latest IMAT image")
-async def get_latest_imat_image(
-    downsample_factor: typing.Annotated[
-        int,
-        Query(
-            ge=1,
-            le=64,
-            description="Integer factor to reduce each dimension by (1 keeps original resolution).",
-        ),
-    ] = 8,
-) -> JSONResponse:
+async def get_latest_imat_image() -> JSONResponse:
     """Return the latest image from any RB folder within the IMAT directory."""
     # Find RB* folders under the IMAT root
     rb_dirs = [d for d in IMAT_DIR.iterdir() if d.is_dir() and re.fullmatch(r"RB\d+", d.name)]
@@ -71,24 +62,14 @@ async def get_latest_imat_image(
 
     # Convert the image to RGB array
     try:
-        data, original_width, original_height, sampled_width, sampled_height = convert_image_to_rgb_array(
-            latest_path, downsample_factor
-        )
+        data, width, height = convert_image_to_rgb_array(latest_path)
     except Exception as exc:
         logger.error("Failed to convert IMAT image at %s", latest_path, exc_info=exc)
         raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to convert IMAT image") from exc
 
-    # Calculate effective downsample factor
-    effective_downsample = original_width / sampled_width if sampled_width else 1
-
     payload = {
         "data": data,
-        "shape": [sampled_height, sampled_width, 3],
-        "originalWidth": original_width,
-        "originalHeight": original_height,
-        "sampledWidth": sampled_width,
-        "sampledHeight": sampled_height,
-        "downsampleFactor": effective_downsample,
+        "shape": [height, width, 3],
     }
     return JSONResponse(payload)
 

@@ -173,7 +173,8 @@ def test_get_latest_imat_image_with_mock_rb_folder(tmp_path, monkeypatch):
 
 
 def test_list_imat_images(tmp_path, monkeypatch):
-    """Verify that /imat/list-images correctly filters and sorts image files."""
+    """Verify that /imat/list-images correctly filters and sorts image
+    files."""
     monkeypatch.setattr(imat, "CEPH_DIR", str(tmp_path))
 
     # Create test directory
@@ -212,7 +213,8 @@ def test_list_imat_images_forbidden(tmp_path, monkeypatch):
 
 
 def test_get_imat_image(tmp_path, monkeypatch):
-    """Ensure /imat/image returns raw binary data and correct metadata headers."""
+    """Ensure /imat/image returns raw binary data and correct metadata
+    headers."""
     monkeypatch.setattr(imat, "CEPH_DIR", str(tmp_path))
 
     # Create a tiny 16-bit TIFF (4x4, all 1000)
@@ -235,7 +237,8 @@ def test_get_imat_image(tmp_path, monkeypatch):
 
 
 def test_get_imat_image_downsampled(tmp_path, monkeypatch):
-    """Verify that downsampling works and headers reflect the sampled dimensions."""
+    """Verify that downsampling works and headers reflect the sampled
+    dimensions."""
     monkeypatch.setattr(imat, "CEPH_DIR", str(tmp_path))
 
     image_path = tmp_path / "test.tif"
@@ -256,7 +259,8 @@ def test_get_imat_image_downsampled(tmp_path, monkeypatch):
 
 
 def test_get_latest_imat_image_no_rb_folders(tmp_path, monkeypatch):
-    """Ensure 404 is returned if no RB folders are present in the IMAT directory."""
+    """Ensure 404 is returned if no RB folders are present in the IMAT
+    directory."""
     monkeypatch.setattr(imat, "IMAT_DIR", tmp_path)
 
     client = TestClient(plotting_api.app)
@@ -277,7 +281,8 @@ def test_get_imat_image_not_found(tmp_path, monkeypatch):
 
 
 def test_get_latest_imat_image_no_images_in_rb(tmp_path, monkeypatch):
-    """Ensure 404 is returned if RB folders exist but contain no valid image files."""
+    """Ensure 404 is returned if RB folders exist but contain no valid image
+    files."""
     monkeypatch.setattr(imat, "IMAT_DIR", tmp_path)
     (tmp_path / "RB1234").mkdir()
 
@@ -301,7 +306,8 @@ def test_get_imat_image_internal_error(tmp_path, monkeypatch):
 
 
 def test_get_latest_imat_image_conversion_error(tmp_path, monkeypatch):
-    """Verify that an error during RB latest image conversion returns a 500 error."""
+    """Verify that an error during RB latest image conversion returns a 500
+    error."""
     monkeypatch.setattr(imat, "IMAT_DIR", tmp_path)
     rb_dir = tmp_path / "RB1234"
     rb_dir.mkdir()
@@ -311,9 +317,7 @@ def test_get_latest_imat_image_conversion_error(tmp_path, monkeypatch):
     with mock.patch(
         "plotting_service.routers.imat.convert_image_to_rgb_array", side_effect=Exception("Conversion failed")
     ):
-        response = client.get(
-            "/imat/latest-image", params={"downsample_factor": 1}, headers={"Authorization": "Bearer foo"}
-        )
+        response = client.get("/imat/latest-image", headers={"Authorization": "Bearer foo"})
 
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
     assert "Unable to convert IMAT image" in response.json()["detail"]
