@@ -4,7 +4,7 @@ from unittest import mock
 import pytest
 
 import plotting_service.routers.live_data as live_data_router
-import plotting_service.services.live_data_service as live_data_service
+from plotting_service.services import live_data_service
 
 
 def reload_live_data_modules(monkeypatch: pytest.MonkeyPatch, production: bool | None) -> tuple[object, object]:
