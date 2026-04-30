@@ -3,10 +3,13 @@
 import asyncio
 import contextlib
 import logging
+import os
 import typing
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+PRODUCTION = os.environ.get("PRODUCTION", "False").lower() == "true"
 
 
 def get_file_snapshot(directory: Path) -> dict[str, float]:
@@ -108,7 +111,8 @@ def get_live_data_directory(instrument: str, ceph_dir: str) -> Path | None:
     :return: Path to live data directory, or None if it doesn't exist
     """
     instrument_upper = instrument.upper()
-    live_data_path = Path(ceph_dir) / "GENERIC" / "livereduce" / instrument_upper
+    generic_dir = "GENERIC" if PRODUCTION else "GENERIC-staging"
+    live_data_path = Path(ceph_dir) / generic_dir / "livereduce" / instrument_upper
 
     if not (live_data_path.exists() and live_data_path.is_dir()):
         return None
