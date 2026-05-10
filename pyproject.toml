@@ -33,6 +33,11 @@ test = [
 ]
 
 
+all = [
+    "plotting-service[formatting]",
+    "plotting-service[test]",
+]
+
 [tool.setuptools]
 packages = ["plotting_service"]
 
