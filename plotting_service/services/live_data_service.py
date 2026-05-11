@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 PRODUCTION = os.environ.get("PRODUCTION", "False").lower() == "true"
 
+
 def get_file_snapshot(directory: Path) -> dict[str, float]:
     """Get a snapshot of all files in a directory with their modification times.
 
@@ -109,7 +110,7 @@ def get_live_data_directory(instrument: str, ceph_dir: str) -> Path | None:
     :param ceph_dir: Base CEPH directory path
     :return: Path to live data directory, or None if it doesn't exist
     """
-    live_data_sub_path =  f"GENERIC/livereduce/{instrument.upper()}{'-staging' if not PRODUCTION else ''}"
+    live_data_sub_path = f"GENERIC/livereduce/{instrument.upper()}{'-staging' if not PRODUCTION else ''}"
     live_data_path = Path(ceph_dir) / live_data_sub_path
 
     if not (live_data_path.exists() and live_data_path.is_dir()):
