@@ -144,7 +144,7 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
         if token_query is not None:
             token_query = token_query.split(" ")[1]
     if token_query is None:
-        return JSONResponse(status_code=HTTPStatus.UNAUTHORIZED, content={"detail":"Unauthenticated"})
+        return JSONResponse(status_code=HTTPStatus.UNAUTHORIZED, content={"detail": "Unauthenticated"})
 
     token = token_query
 
@@ -156,7 +156,7 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
     try:
         user = get_user_from_token(token)
     except AuthError:
-        return JSONResponse(status_code=HTTPStatus.FORBIDDEN, content={"detail":"Forbidden"})
+        return JSONResponse(status_code=HTTPStatus.FORBIDDEN, content={"detail": "Forbidden"})
 
     if user.role == "staff":
         return await call_next(request)
@@ -167,12 +167,14 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
 
         if request.url.path == "/":  # Root of sub-app
             return await call_next(request)
-        return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail":"Missing 'file' parameter for live check"})
+        return JSONResponse(
+            status_code=HTTPStatus.BAD_REQUEST, content={"detail": "Missing 'file' parameter for live check"}
+        )
 
     # Assuming structure: INSTRUMENT/RBnumber/...
     parts = Path(file_param).parts
     if not parts or parts[0] == "/" or parts[0] == ".":
-        return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail":"Invalid file path format"})
+        return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": "Invalid file path format"})
 
     instrument = parts[0]
 
@@ -197,7 +199,10 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
         return await call_next(request)
 
     logger.warning(f"User {user.user_number} denied access to live experiment {current_rb_int}")
-    return JSONResponse(status_code=HTTPStatus.FORBIDDEN, content={"detail":"Forbidden: You do not have access to the current live experiment"})
+    return JSONResponse(
+        status_code=HTTPStatus.FORBIDDEN,
+        content={"detail": "Forbidden: You do not have access to the current live experiment"},
+    )
 
 
 app.include_router(router)
