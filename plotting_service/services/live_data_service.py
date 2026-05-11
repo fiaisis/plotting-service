@@ -10,7 +10,6 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 PRODUCTION = os.environ.get("PRODUCTION", "False").lower() == "true"
-PRO = PRODUCTION and not os.environ.get("TESTING", "False").lower() == "true"
 
 def get_file_snapshot(directory: Path) -> dict[str, float]:
     """Get a snapshot of all files in a directory with their modification times.
