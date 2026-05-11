@@ -12,6 +12,7 @@ from h5grove.fastapi_utils import router, settings  # type: ignore
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from plotting_service.auth import get_experiments_for_user, get_user_from_token
 from plotting_service.exceptions import AuthError
@@ -143,7 +144,7 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
         if token_query is not None:
             token_query = token_query.split(" ")[1]
     if token_query is None:
-        raise HTTPException(HTTPStatus.UNAUTHORIZED, "Unauthenticated")
+        return JSONResponse(status_code=HTTPStatus.UNAUTHORIZED, content={"detail":"Unauthenticated"})
 
     token = token_query
 
@@ -155,7 +156,7 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
     try:
         user = get_user_from_token(token)
     except AuthError:
-        raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden") from None
+        return JSONResponse(status_code=HTTPStatus.FORBIDDEN, content={"detail":"Forbidden"})
 
     if user.role == "staff":
         return await call_next(request)
@@ -166,12 +167,12 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
 
         if request.url.path == "/":  # Root of sub-app
             return await call_next(request)
-        raise HTTPException(HTTPStatus.BAD_REQUEST, "Missing 'file' parameter for live check")
+        return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail":"Missing 'file' parameter for live check"})
 
     # Assuming structure: INSTRUMENT/RBnumber/...
     parts = Path(file_param).parts
     if not parts or parts[0] == "/" or parts[0] == ".":
-        raise HTTPException(HTTPStatus.BAD_REQUEST, "Invalid file path format")
+        return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail":"Invalid file path format"})
 
     instrument = parts[0]
 
@@ -196,7 +197,7 @@ async def check_live_permissions(request: Request, call_next: typing.Callable[..
         return await call_next(request)
 
     logger.warning(f"User {user.user_number} denied access to live experiment {current_rb_int}")
-    raise HTTPException(HTTPStatus.FORBIDDEN, detail="Forbidden: You do not have access to the current live experiment")
+    return JSONResponse(status_code=HTTPStatus.FORBIDDEN, content={"detail":"Forbidden: You do not have access to the current live experiment"})
 
 
 app.include_router(router)
