@@ -95,7 +95,8 @@ Filling this in will provide the correct template for Features or Bugs as approp
    conda run -n plotting-service ruff check .
    conda run -n plotting-service mypy plotting_service
    ```
-2. **PR Description**: Follow the repository's PR template. It typically requires:
+2. **PR Title**: Pull request titles should use a clear, concise description in normal grammar (e.g., `Update agent guidelines`). Do not use snake_case for PR titles.
+3. **PR Description**: Follow the repository's PR template. It typically requires:
    - Linking the issue: `Closes # <Issue Number>` (If an issue number is not evident from the task, ask the user for it or confirm if there is no issue number to link).
    - A "## Description" header followed by an explanation of changes.
 
