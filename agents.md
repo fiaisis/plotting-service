@@ -89,14 +89,15 @@ Filling this in will provide the correct template for Features or Bugs as approp
 
 ### Pull Request Process
 
-1. **Local Validation**: Before opening a PR, ensure all tests pass and code quality checks are green.
+1. **Local Validation**: Before opening a PR, ensure all tests pass and code quality checks are green. Use the conda environment:
    ```bash
-   pytest
-   ruff check .
-   mypy plotting_service
+   conda run -n plotting-service pytest
+   conda run -n plotting-service ruff check .
+   conda run -n plotting-service mypy plotting_service
    ```
-2. **PR Description**: Use the "## Description" header followed by a clear explanation of your changes.
-3. **Reference Issues**: Link any related issues in the description (e.g., "Closes #123").
+2. **PR Description**: Follow the repository's PR template. It typically requires:
+   - Linking the issue: `Closes # <Issue Number>` (If an issue number is not evident from the task, ask the user for it or confirm if there is no issue number to link).
+   - A "## Description" header followed by an explanation of changes.
 
 ### Handling Dependabot PRs
 
