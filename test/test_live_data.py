@@ -7,31 +7,29 @@ import plotting_service.routers.live_data as live_data_router
 from plotting_service.services import live_data_service
 
 
-def reload_live_data_modules(monkeypatch: pytest.MonkeyPatch, production: bool | None) -> tuple[object, object]:
-    if production is None:
-        monkeypatch.delenv("PRODUCTION", raising=False)
+def reload_live_data_modules(monkeypatch: pytest.MonkeyPatch, live_data_path: str | None) -> tuple[object, object]:
+    if live_data_path is None:
+        monkeypatch.delenv("LIVE_DATA_PATH", raising=False)
     else:
-        monkeypatch.setenv("PRODUCTION", str(production).lower())
+        monkeypatch.setenv("LIVE_DATA_PATH", live_data_path)
 
     reloaded_service = importlib.reload(live_data_service)
     reloaded_router = importlib.reload(live_data_router)
     return reloaded_service, reloaded_router
 
 
-def test_get_live_data_directory_uses_staging_path_when_production_is_unset(tmp_path, monkeypatch):
-    """Use the staging live-data directory when the PRODUCTION flag is
-    unset."""
-    live_data_service_module, _ = reload_live_data_modules(monkeypatch, production=None)
+def test_get_live_data_directory_uses_staging_path_by_default(tmp_path, monkeypatch):
+    """Use the staging live-data directory when LIVE_DATA_PATH is unset."""
+    live_data_service_module, _ = reload_live_data_modules(monkeypatch, live_data_path=None)
     live_data_path = tmp_path / "GENERIC-staging" / "livereduce" / "LOQ"
     live_data_path.mkdir(parents=True)
 
     assert live_data_service_module.get_live_data_directory("loq", str(tmp_path)) == live_data_path
 
 
-def test_get_live_data_directory_uses_generic_path_when_production_is_true(tmp_path, monkeypatch):
-    """Use the production live-data directory when the PRODUCTION flag is
-    true."""
-    live_data_service_module, _ = reload_live_data_modules(monkeypatch, production=True)
+def test_get_live_data_directory_uses_configured_path(tmp_path, monkeypatch):
+    """Use the live-data directory configured by the environment."""
+    live_data_service_module, _ = reload_live_data_modules(monkeypatch, live_data_path="GENERIC")
     live_data_path = tmp_path / "GENERIC" / "livereduce" / "LOQ"
     live_data_path.mkdir(parents=True)
 
@@ -41,7 +39,7 @@ def test_get_live_data_directory_uses_generic_path_when_production_is_true(tmp_p
 def test_get_live_data_directory_returns_none_when_selected_path_is_missing(tmp_path, monkeypatch):
     """Return None when the environment-selected live-data directory is
     absent."""
-    live_data_service_module, _ = reload_live_data_modules(monkeypatch, production=False)
+    live_data_service_module, _ = reload_live_data_modules(monkeypatch, live_data_path="GENERIC-staging")
     (tmp_path / "GENERIC" / "livereduce" / "LOQ").mkdir(parents=True)
 
     assert live_data_service_module.get_live_data_directory("loq", str(tmp_path)) is None
@@ -50,7 +48,7 @@ def test_get_live_data_directory_returns_none_when_selected_path_is_missing(tmp_
 @pytest.mark.asyncio
 async def test_get_live_data_files_validates_staging_base_path(tmp_path, monkeypatch):
     """Validate listed files against the staging live-data base path."""
-    _, live_data_router_module = reload_live_data_modules(monkeypatch, production=False)
+    _, live_data_router_module = reload_live_data_modules(monkeypatch, live_data_path="GENERIC-staging")
     live_data_path = tmp_path / "GENERIC-staging" / "livereduce" / "LOQ"
     live_data_path.mkdir(parents=True)
     (live_data_path / "second.txt").write_text("second")
@@ -63,13 +61,13 @@ async def test_get_live_data_files_validates_staging_base_path(tmp_path, monkeyp
         files = await live_data_router_module.get_live_data_files("loq")
 
     assert files == ["first.txt", "second.txt"]
-    safe_check_filepath.assert_called_once_with(live_data_path, str(tmp_path) + "/GENERIC-staging/livereduce")
+    safe_check_filepath.assert_called_once_with(live_data_path, str(tmp_path / "GENERIC-staging" / "livereduce"))
 
 
 @pytest.mark.asyncio
-async def test_live_data_validates_production_base_path(tmp_path, monkeypatch):
-    """Validate streamed live-data events against the production base path."""
-    _, live_data_router_module = reload_live_data_modules(monkeypatch, production=True)
+async def test_live_data_validates_configured_base_path(tmp_path, monkeypatch):
+    """Validate streamed live-data events against the configured base path."""
+    _, live_data_router_module = reload_live_data_modules(monkeypatch, live_data_path="GENERIC")
     live_data_path = tmp_path / "GENERIC" / "livereduce" / "LOQ"
     live_data_path.mkdir(parents=True)
 
@@ -84,7 +82,7 @@ async def test_live_data_validates_production_base_path(tmp_path, monkeypatch):
     ):
         response = await live_data_router_module.live_data("loq")
 
-    safe_check_filepath.assert_called_once_with(live_data_path, str(tmp_path) + "/GENERIC/livereduce")
+    safe_check_filepath.assert_called_once_with(live_data_path, str(tmp_path / "GENERIC" / "livereduce"))
     generate_file_change_events.assert_called_once_with(live_data_path, str(tmp_path), "loq", 30, 2)
     assert response.media_type == "text/event-stream"
     assert response.headers["X-Accel-Buffering"] == "no"
