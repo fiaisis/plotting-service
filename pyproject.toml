@@ -4,7 +4,7 @@ readme = "README.md"
 version = "0.0.1"
 requires-python = ">= 3.11"
 dependencies = [
-    "fastapi[all]==0.139.2",
+    "fastapi[all]==0.140.7",
     "pydantic==2.13.4",
     "uvicorn==0.51.0",
     "h5grove[fastapi]==4.0.0",
