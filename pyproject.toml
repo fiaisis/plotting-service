@@ -6,7 +6,7 @@ requires-python = ">= 3.11"
 dependencies = [
     "fastapi[all]==0.141.1",
     "pydantic==2.13.4",
-    "uvicorn==0.52.1",
+    "uvicorn==0.52.3",
     "h5grove[fastapi]==4.0.0",
     "PyJWT==2.13.0",
     "requests==2.34.2",
@@ -18,8 +18,8 @@ dependencies = [
 
 [project.optional-dependencies]
 formatting = [
-    "ruff==0.16.2",
-    "mypy==2.3.0",
+    "ruff==0.16.3",
+    "mypy==2.3.1",
     "plotting-service[test]",
     "types-requests==2.33.0.20260712",
     "types-urllib3==1.26.25.14",
